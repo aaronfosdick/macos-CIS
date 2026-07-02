@@ -75,7 +75,7 @@ check_and_apply() {
 # ------------------------------------------------------------------------------
 echo "[*] Checking and applying Core CIS Controls..."
 
-# 1. FileVault
+# LABEL: 1.1 FileVault
 echo ""
 echo "--- Control 1: FileVault (Full Disk Encryption) ---"
 check_and_apply \
@@ -83,7 +83,7 @@ check_and_apply \
     'fdesetup status 2>/dev/null | grep -q "FileVault is On."' \
     'fdesetup enable'
 
-# 2. Firewall
+# LABEL: 1.2 Application Firewall
 echo ""
 echo "--- Control 2: Application Firewall ---"
 check_and_apply \
@@ -96,7 +96,7 @@ check_and_apply \
     '/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode 2>/dev/null | grep -q "Stealth mode enabled"' \
     '/usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on'
 
-# 3. Gatekeeper
+# LABEL: 1.3 Gatekeeper
 echo ""
 echo "--- Control 3: Gatekeeper ---"
 check_and_apply \
@@ -104,7 +104,7 @@ check_and_apply \
     'spctl --status 2>/dev/null | grep -q "assessments enabled"' \
     'spctl --master-enable'
 
-# 4. Automatic Updates
+# LABEL: 1.4 Automatic Updates
 echo ""
 echo "--- Control 4: Automatic macOS Updates ---"
 for key in AutomaticCheckEnabled AutomaticDownload CriticalUpdateInstall; do
@@ -125,7 +125,7 @@ if [ "$AUTO_UPD" = "y" ]; then
         'defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true'
 fi
 
-# 5. System Integrity Protection (SIP)
+# LABEL: 1.5 System Integrity Protection (SIP)
 echo ""
 echo "--- Control 5: System Integrity Protection ---"
 echo "[?] SIP can only be enabled from macOS Recovery. Checking current status..."
@@ -139,6 +139,7 @@ else
     echo "     4. Restart normally."
 fi
 
+# LABEL: 1.6 Guest Account
 # 7. Guest Account
 echo ""
 echo "--- Control 7: Guest Account ---"
@@ -351,7 +352,8 @@ echo ""
 echo "[+] Setting unified log retention cap to 24 hours..."
 /usr/bin/log config --mode "level:persist:24h" 2>/dev/null && echo "     Unified log retention set to 24 hours." || echo "     [!] Failed – check macOS version."
 
-# 2. Newsyslog – rotate daily, keep 0 archives
+
+# LABEL: 4.2 Newsyslog Rotation
 echo "[+] Configuring newsyslog for /var/log/* files (daily, zero retention)..."
 cat > /etc/newsyslog.d/99-cis-24h-retention.conf << 'EOF'
 # CIS 24-hour retention: rotate daily, keep 0 copies, compress old (none)
@@ -375,7 +377,6 @@ else
     echo "? [= Sender install] file /var/log/install.log ttl=24" >> "$ASL_CONF"
     echo "     Appended TTL rules to $ASL_CONF"
 fi
-
 # 4. Delete old log files from /Library/Logs and ~/Library/Logs
 echo "[+] Removing log files older than 24 hours from common locations..."
 if [ -d /Library/Logs ]; then
@@ -395,4 +396,5 @@ echo "=================================================================="
 echo "[✓] Core Terminal Method CIS Controls Applied Successfully."
 echo "    Note: If this asset is registered under MDM via Fleet, MDM "
 echo "    profiles may override some local settings applied above."
+echo "=================================================================="
 echo "=================================================================="

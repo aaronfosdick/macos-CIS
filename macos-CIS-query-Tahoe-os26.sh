@@ -56,6 +56,8 @@ else
     print_status "Gatekeeper" "Disabled"
 fi
 
+
+
 # Automatic Updates
 auto_check=$(defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled 2>/dev/null)
 print_status "Automatic Update Check Enabled" "${auto_check:-0 (Disabled)}"
@@ -97,7 +99,8 @@ else
     print_status "Secure Boot" "Unable to determine / Not applicable"
 fi
 
-# Password Policy (CIS Control 6 – Long Passphrase)
+
+# LABEL: 1.8 Password Policy
 pw_policy=$(pwpolicy -getglobalpolicy 2>/dev/null)
 min_chars=$(echo "$pw_policy" | tr ',' '\n' | grep "minChars" | cut -d= -f2)
 max_fail=$(echo "$pw_policy" | tr ',' '\n' | grep "maxFailedLoginAttempts" | cut -d= -f2)
@@ -115,6 +118,8 @@ print_status "requiresSymbol (should be 0)" "${requires_symbol:-Not Set}"
 echo ""
 
 # ------------------------------------------------------------------------------
+
+
 # 1. SOFTWARE UPDATES & SEEDING
 # ------------------------------------------------------------------------------
 echo "--- [1] Software Update Status ---"
@@ -293,7 +298,8 @@ for user_test in /Users/*; do
     fi
 done
 
-# Time Machine status
+
+# LABEL: 3.5 Time Machine Remote Backups
 tm_status=$(tmutil destinationinfo 2>/dev/null | head -1)
 if [ -n "$tm_status" ]; then
     print_status "Time Machine" "Destinations configured (remote backups possible)"
