@@ -45,3 +45,15 @@ Will ask several questions and then apply the corresponding CIS controls.
 ## License
 
 These scripts are provided as‑is for educational and administrative purposes. Use at your own risk.
+
+## AppleScript Migration Guidance
+
+These scripts are written in bash and will need a more substantial conversion to be compatible with AppleScript. Use the following guidance when translating them:
+
+- Replace bash-specific syntax such as `#!/bin/bash`, `if [ ... ]`, `[[ ... ]]`, `$(...)`, `local`, `eval`, `read -p`, and heredocs with AppleScript equivalents.
+- Use double-quoted AppleScript strings. If a string must contain a literal double quote, escape it as `\"`.
+- Keep shell literals inside AppleScript command strings in single quotes when possible, for example `grep -q 'assessments enabled'`.
+- For dynamic values, build shell commands with `quoted form of` so values are safely escaped rather than manually inserted.
+- Prefer wrapping the existing system commands in `do shell script` from AppleScript, while keeping the overall logic and prompts in AppleScript for UI and flow control.
+- For read-only audit logic, return status text or result values from AppleScript rather than relying on bash-style `echo` and `printf` output.
+- For remediation logic, use AppleScript dialogs or prompts for user input and then pass the resulting values into shell commands via `do shell script`.

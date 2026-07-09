@@ -18,8 +18,230 @@ echo "=================================================================="
 echo ""
 
 # ------------------------------------------------------------------------------
+# SNAPSHOT RESTORE HELPERS
+# ------------------------------------------------------------------------------
+MODE="apply"
+SNAPSHOT_DIR="/private/var/db/macos-cis/snapshots"
+
+list_snapshots() {
+  if [ -d "$SNAPSHOT_DIR" ]; then
+    find "$SNAPSHOT_DIR" -maxdepth 1 -type f -name 'macos-cis-snapshot-*.txt' 2>/dev/null | sort
+  fi
+}
+
+snapshot_label() {
+  local snapshot_path="$1"
+  local base_name
+  base_name=$(basename "$snapshot_path")
+  local stamp="${base_name#macos-cis-snapshot-}"
+  stamp="${stamp%.txt}"
+  if [[ "$stamp" =~ ^([0-9]{8})-([0-9]{6})$ ]]; then
+    local date_part="${BASH_REMATCH[1]}"
+    local time_part="${BASH_REMATCH[2]}"
+    printf '%s-%s-%s %s:%s:%s' \
+      "${date_part:0:4}" "${date_part:4:2}" "${date_part:6:2}" \
+      "${time_part:0:2}" "${time_part:2:2}" "${time_part:4:2}"
+  else
+    printf '%s' "$base_name"
+  fi
+}
+
+choose_snapshot() {
+  local -a snapshots=()
+  local line
+  while IFS= read -r line; do
+    [ -n "$line" ] && snapshots+=("$line")
+  done < <(list_snapshots)
+
+  if [ ${#snapshots[@]} -eq 0 ]; then
+    echo "   [!] No snapshots found in $SNAPSHOT_DIR"
+    return 1
+  fi
+
+  echo ""
+  echo "Available snapshots:"
+  local i
+  for ((i=0; i<${#snapshots[@]}; i++)); do
+    echo "   [$((i+1))] $(snapshot_label "${snapshots[$i]}")"
+  done
+
+  read -p "[?] Select snapshot to restore [1-${#snapshots[@]}]: " SNAPSHOT_CHOICE
+  if [[ ! "$SNAPSHOT_CHOICE" =~ ^[0-9]+$ ]] || [ "$SNAPSHOT_CHOICE" -lt 1 ] || [ "$SNAPSHOT_CHOICE" -gt ${#snapshots[@]} ]; then
+    echo "   [!] Invalid selection. Aborting."
+    return 1
+  fi
+
+  echo "${snapshots[$((SNAPSHOT_CHOICE-1))]}"
+}
+
+restore_from_snapshot() {
+  local snapshot_file="$1"
+  echo ""
+  echo "[*] Restoring settings from $(basename "$snapshot_file")"
+  echo "    Immutable or unsafe settings will be skipped."
+
+  while IFS= read -r entry; do
+    entry=$(printf '%s' "$entry" | tr -d '\r')
+    case "$entry" in
+      \#*|'')
+        continue
+        ;;
+      *=*)
+        local key="${entry%%=*}"
+        local value="${entry#*=}"
+        ;;
+      *)
+        continue
+        ;;
+    esac
+
+    case "$key" in
+      CIS_2_3_1_FILEVAULT_STATUS)
+        echo "   [!] Skipping FileVault restore; disabling FileVault is not safe."
+        ;;
+      CIS_2_3_2_PERSONAL_RECOVERY_KEY|CIS_2_3_2_INSTITUTIONAL_RECOVERY_KEY)
+        echo "   [!] Skipping recovery-key restore; this state is not safely reversible."
+        ;;
+      CIS_5_1_1_SIP_STATUS)
+        echo "   [!] Skipping SIP restore; SIP changes should be handled from Recovery."
+        ;;
+      CIS_SECURE_BOOT)
+        echo "   [!] Skipping Secure Boot restore; this is not safely changed from the CLI."
+        ;;
+      CIS_2_4_1_APPLICATION_FIREWALL)
+        if [ "$value" = "Enabled" ]; then
+          /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on 2>/dev/null
+        elif [ "$value" = "Disabled" ]; then
+          /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off 2>/dev/null
+        fi
+        ;;
+      CIS_2_4_2_FIREWALL_STEALTH_MODE)
+        if [ "$value" = "Enabled" ]; then
+          /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on 2>/dev/null
+        elif [ "$value" = "Disabled" ]; then
+          /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode off 2>/dev/null
+        fi
+        ;;
+      CIS_GATEKEEPER_STATUS)
+        if [ "$value" = "Enabled" ]; then
+          spctl --master-enable 2>/dev/null
+        elif [ "$value" = "Disabled" ]; then
+          spctl --master-disable 2>/dev/null
+        fi
+        ;;
+      CIS_1_1_AUTOMATIC_UPDATE_CHECK|CIS_1_2_AUTOMATIC_DOWNLOAD|CIS_1_5_CRITICAL_UPDATE_INSTALL|CIS_1_4_APP_STORE_AUTO_UPDATE|CIS_1_3_AUTOMATIC_OS_UPDATES)
+        case "$key" in
+          CIS_1_1_AUTOMATIC_UPDATE_CHECK)
+            defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true 2>/dev/null
+            ;;
+          CIS_1_2_AUTOMATIC_DOWNLOAD)
+            defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true 2>/dev/null
+            ;;
+          CIS_1_5_CRITICAL_UPDATE_INSTALL)
+            defaults write /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool true 2>/dev/null
+            ;;
+          CIS_1_4_APP_STORE_AUTO_UPDATE)
+            defaults write /Library/Preferences/com.apple.commerce AutoUpdate -bool true 2>/dev/null
+            ;;
+          CIS_1_3_AUTOMATIC_OS_UPDATES)
+            defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true 2>/dev/null
+            ;;
+        esac
+        ;;
+      CIS_6_1_GUEST_ACCOUNT)
+        if [ "$value" = "Enabled" ]; then
+          defaults write /Library/Preferences/com.apple.loginwindow GuestEnabled -bool true 2>/dev/null
+        else
+          defaults write /Library/Preferences/com.apple.loginwindow GuestEnabled -bool false 2>/dev/null
+        fi
+        ;;
+      CIS_2_2_1_SCREEN_SAVER_TIMEOUT)
+        if [[ "$value" =~ ^[0-9]+$ ]]; then
+          defaults write com.apple.screensaver idleTime -int "$value" 2>/dev/null
+        fi
+        ;;
+      CIS_2_2_2_SCREEN_SAVER_PASSWORD_REQUIRED)
+        if [ "$value" = "Enabled" ]; then
+          defaults write com.apple.screensaver askForPassword -int 1 2>/dev/null
+        else
+          defaults write com.apple.screensaver askForPassword -int 0 2>/dev/null
+        fi
+        ;;
+      CIS_2_2_2_SCREEN_SAVER_PASSWORD_GRACE)
+        if [[ "$value" =~ ^[0-9]+$ ]]; then
+          defaults write com.apple.screensaver askForPasswordDelay -int "$value" 2>/dev/null
+        fi
+        ;;
+      CIS_2_2_3_BLUETOOTH_QUIET_MODE)
+        if [ "$value" = "Enabled" ]; then
+          /usr/libexec/PlistBuddy -c "Set :QuietMode true" /Library/Preferences/com.apple.Bluetooth.plist 2>/dev/null
+        else
+          /usr/libexec/PlistBuddy -c "Set :QuietMode false" /Library/Preferences/com.apple.Bluetooth.plist 2>/dev/null
+        fi
+        ;;
+      CIS_3_6_REMOTE_LOGIN)
+        if [ "$value" = "Enabled" ]; then
+          systemsetup -setremotelogin on 2>/dev/null
+        else
+          systemsetup -setremotelogin off 2>/dev/null
+        fi
+        ;;
+      CIS_3_1_SMB_FILE_SHARING)
+        if [ "$value" = "Enabled" ]; then
+          launchctl enable system/com.apple.smbd 2>/dev/null
+        else
+          launchctl disable system/com.apple.smbd 2>/dev/null
+        fi
+        ;;
+      CIS_3_2_CUPS_PRINTER_SHARING)
+        if [ "$value" = "Enabled" ]; then
+          cupsctl --share-printers 2>/dev/null
+        else
+          cupsctl --no-share-printers 2>/dev/null
+        fi
+        ;;
+      CIS_6_2_GUEST_FILE_SHARE_ACCESS)
+        if [ "$value" = "Enabled" ]; then
+          defaults write /Library/Preferences/com.apple.AppleFileServer guestAccess -bool true 2>/dev/null
+        else
+          defaults write /Library/Preferences/com.apple.AppleFileServer guestAccess -bool false 2>/dev/null
+        fi
+        ;;
+      CIS_6_2_GUEST_SMB_ACCESS)
+        if [ "$value" = "Enabled" ]; then
+          defaults write /Library/Preferences/com.apple.smb.server AllowGuestAccess -bool true 2>/dev/null
+        else
+          defaults write /Library/Preferences/com.apple.smb.server AllowGuestAccess -bool false 2>/dev/null
+        fi
+        ;;
+    esac
+  done < "$snapshot_file"
+
+  echo "[✓] Snapshot restore completed."
+}
+
+# ------------------------------------------------------------------------------
 # INTERACTIVE CHOICES SECTION
 # ------------------------------------------------------------------------------
+
+echo "[?] Choose an operation:"
+echo "    1) Apply all CIS changes"
+echo "    2) Revert to a snapshot"
+read -p "[?] Selection [1/2]: " OPERATION_SELECTION
+case "$OPERATION_SELECTION" in
+  2)
+    MODE="revert"
+    ;;
+  *)
+    MODE="apply"
+    ;;
+esac
+
+if [ "$MODE" = "revert" ]; then
+  SELECTED_SNAPSHOT="$(choose_snapshot)" || exit 1
+  restore_from_snapshot "$SELECTED_SNAPSHOT"
+  exit 0
+fi
 
 # 1. Screen Saver Timeout
 read -p "[?] Enter screen saver inactivity timeout in seconds (CIS recommends 1200 or less): " SS_TIMEOUT

@@ -27,6 +27,36 @@ print_status() {
     printf "%-50s : %s\n" "$control_name" "$status"
 }
 
+# Snapshot export for future restore/apply workflow.
+# Format is simple KEY=VALUE so it remains human-readable and easy to parse later.
+SNAPSHOT_DIR="/private/var/db/macos-cis/snapshots"
+SNAPSHOT_TS="$(date '+%Y%m%d-%H%M%S')"
+SNAPSHOT_RUN_TIME="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+SNAPSHOT_FILE=""
+
+snapshot_setting() {
+    local key="$1"
+    local value="$2"
+    if [ -n "$SNAPSHOT_FILE" ]; then
+        value=$(printf '%s' "$value" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g')
+        printf '%s=%s\n' "$key" "$value" >> "$SNAPSHOT_FILE"
+    fi
+}
+
+mkdir -p "$SNAPSHOT_DIR"
+SNAPSHOT_FILE="$SNAPSHOT_DIR/macos-cis-snapshot-$SNAPSHOT_TS.txt"
+{
+    echo "# macOS CIS Snapshot"
+    echo "# Generated: $SNAPSHOT_RUN_TIME"
+    echo "# Version: 1"
+    echo "# Format: KEY=VALUE"
+    echo "# Purpose: Human-readable restore input for a future AppleScript apply workflow"
+    echo "SNAPSHOT_TIMESTAMP=$SNAPSHOT_RUN_TIME"
+    echo "SNAPSHOT_FILENAME=$(basename "$SNAPSHOT_FILE")"
+} > "$SNAPSHOT_FILE"
+
+echo "[+] Snapshot export initialized: $SNAPSHOT_FILE"
+
 # ------------------------------------------------------------------------------
 # 0. CORE CIS CONTROLS (FileVault, Firewall, Gatekeeper, Auto Updates, SIP,
 #    Guest Account, Secure Boot)
@@ -516,6 +546,202 @@ if [ -n "$first_user" ]; then
 fi
 
 echo ""
+# ------------------------------------------------------------------------------
+# 7. WRITE SNAPSHOT EXPORT
+# ------------------------------------------------------------------------------
+# Normalize several values into simple, restore-friendly strings.
+if echo "$fv_status" | grep -q "FileVault is On."; then
+    fv_value="On"
+else
+    fv_value="Off"
+fi
+if fdesetup haspersonalrecoverykey 2>/dev/null | grep -q "true"; then
+    personal_recovery_value="Present"
+else
+    personal_recovery_value="Not Present"
+fi
+if fdesetup hasinstitutionalrecoverykey 2>/dev/null | grep -q "true"; then
+    institutional_recovery_value="Present"
+else
+    institutional_recovery_value="Not Present"
+fi
+if [ "$fw_state" = "enabled" ] || [ "$fw_state" = "Firewall is enabled" ]; then
+    firewall_state_value="Enabled"
+else
+    firewall_state_value="Disabled"
+fi
+if [ "$fw_stealth" = "enabled" ] || [ "$fw_stealth" = "Stealth mode enabled" ]; then
+    firewall_stealth_value="Enabled"
+else
+    firewall_stealth_value="Disabled"
+fi
+if echo "$gk_status" | grep -q "assessments enabled"; then
+    gatekeeper_value="Enabled"
+else
+    gatekeeper_value="Disabled"
+fi
+if [ "$auto_check" = "1" ] || [ "$auto_check" = "true" ]; then
+    auto_check_value="Enabled"
+else
+    auto_check_value="Disabled"
+fi
+if [ "$auto_download" = "1" ] || [ "$auto_download" = "true" ]; then
+    auto_download_value="Enabled"
+else
+    auto_download_value="Disabled"
+fi
+if [ "$crit_update" = "1" ] || [ "$crit_update" = "true" ]; then
+    crit_update_value="Enabled"
+else
+    crit_update_value="Disabled"
+fi
+if [ "$app_update" = "1" ] || [ "$app_update" = "true" ]; then
+    app_update_value="Enabled"
+else
+    app_update_value="Disabled"
+fi
+if [ "$macos_update" = "1" ] || [ "$macos_update" = "true" ]; then
+    macos_update_value="Enabled"
+else
+    macos_update_value="Disabled"
+fi
+if echo "$sip_status" | grep -q "enabled"; then
+    sip_value="Enabled"
+else
+    sip_value="Disabled"
+fi
+if [ -z "$boot_args" ]; then
+    boot_args_value="Not Set"
+else
+    boot_args_value="$boot_args"
+fi
+if [ "$guest_status" = "1" ] || [ "$guest_status" = "true" ]; then
+    guest_account_value="Enabled"
+else
+    guest_account_value="Disabled"
+fi
+if echo "$root_shell" | grep -q "/usr/bin/false"; then
+    root_shell_value="Disabled"
+else
+    root_shell_value="Enabled"
+fi
+if system_profiler SPiBridgeDataType 2>/dev/null | grep -q "Secure Boot: Enabled"; then
+    secure_boot_value="Enabled"
+elif sysctl -n hw.optional.arm64 2>/dev/null | grep -q 1; then
+    secure_boot_value="Always Enabled"
+else
+    secure_boot_value="Unable to Determine"
+fi
+if [ "$ss_timeout" = "Not Configured" ]; then
+    screensaver_timeout_value="Not Configured"
+else
+    screensaver_timeout_value="$ss_timeout"
+fi
+if [ "$ss_pwd" = "1" ] || [ "$ss_pwd" = "true" ]; then
+    screensaver_password_required_value="Enabled"
+else
+    screensaver_password_required_value="Disabled"
+fi
+if [ "$ss_delay" = "Not Configured" ]; then
+    screensaver_password_grace_value="Not Configured"
+else
+    screensaver_password_grace_value="$ss_delay"
+fi
+if [ "$bt_sharing" = "true" ] || [ "$bt_sharing" = "1" ]; then
+    bluetooth_quiet_mode_value="Enabled"
+else
+    bluetooth_quiet_mode_value="Disabled"
+fi
+if launchctl print-disabled system 2>/dev/null | grep -q "com.apple.RemoteDesktop"; then
+    remote_management_value="Disabled"
+else
+    remote_management_value="Enabled"
+fi
+if [ -n "$pmset_info" ]; then
+    power_management_value="$pmset_info"
+else
+    power_management_value="Not Configured"
+fi
+if [ -n "$ae_status" ]; then
+    remote_apple_events_value="Enabled"
+else
+    remote_apple_events_value="Disabled"
+fi
+if [ -n "$nat_status" ] && [ "$nat_status" != "{}" ]; then
+    internet_sharing_value="Enabled"
+else
+    internet_sharing_value="Disabled"
+fi
+if [ "$ssh_state" = "on" ] || [ "$ssh_state" = "On" ] || [ "$ssh_state" = "true" ]; then
+    ssh_state_value="Enabled"
+else
+    ssh_state_value="Disabled"
+fi
+if launchctl print-disabled system 2>/dev/null | grep -q "com.apple.smbd"; then
+    smb_file_sharing_value="Disabled"
+else
+    smb_file_sharing_value="Enabled"
+fi
+if echo "$cups_sharing" | grep -q "_share_printers=0"; then
+    cups_printer_sharing_value="Disabled"
+elif echo "$cups_sharing" | grep -q "_share_printers=1"; then
+    cups_printer_sharing_value="Enabled"
+else
+    cups_printer_sharing_value="Unknown"
+fi
+if [ -n "$cache_status" ]; then
+    content_caching_value="$cache_status"
+else
+    content_caching_value="Inactive"
+fi
+if [ "$afp_guest" = "0" ] || [ "$afp_guest" = "false" ]; then
+    guest_file_share_value="Disabled"
+else
+    guest_file_share_value="Enabled"
+fi
+if [ "$smb_guest" = "0" ] || [ "$smb_guest" = "false" ]; then
+    guest_smb_share_value="Disabled"
+else
+    guest_smb_share_value="Enabled"
+fi
+
+snapshot_setting "CIS_2_3_1_FILEVAULT_STATUS" "$fv_value"
+snapshot_setting "CIS_2_3_2_PERSONAL_RECOVERY_KEY" "$personal_recovery_value"
+snapshot_setting "CIS_2_3_2_INSTITUTIONAL_RECOVERY_KEY" "$institutional_recovery_value"
+snapshot_setting "CIS_2_4_1_APPLICATION_FIREWALL" "$firewall_state_value"
+snapshot_setting "CIS_2_4_2_FIREWALL_STEALTH_MODE" "$firewall_stealth_value"
+snapshot_setting "CIS_GATEKEEPER_STATUS" "$gatekeeper_value"
+snapshot_setting "CIS_1_1_AUTOMATIC_UPDATE_CHECK" "$auto_check_value"
+snapshot_setting "CIS_1_2_AUTOMATIC_DOWNLOAD" "$auto_download_value"
+snapshot_setting "CIS_1_5_CRITICAL_UPDATE_INSTALL" "$crit_update_value"
+snapshot_setting "CIS_1_4_APP_STORE_AUTO_UPDATE" "$app_update_value"
+snapshot_setting "CIS_1_3_AUTOMATIC_OS_UPDATES" "$macos_update_value"
+snapshot_setting "CIS_5_1_1_SIP_STATUS" "$sip_value"
+snapshot_setting "CIS_5_1_2_BOOT_ARGS" "$boot_args_value"
+snapshot_setting "CIS_6_1_GUEST_ACCOUNT" "$guest_account_value"
+snapshot_setting "CIS_6_3_ROOT_SHELL" "$root_shell_value"
+snapshot_setting "CIS_SECURE_BOOT" "$secure_boot_value"
+snapshot_setting "CIS_5_3_PASSWORD_MINCHARS" "${min_chars:-Not Set}"
+snapshot_setting "CIS_5_4_PASSWORD_MAX_FAILED_LOGIN_ATTEMPTS" "${max_fail:-Not Set}"
+snapshot_setting "CIS_5_3_REQUIRES_NUMERIC" "${requires_numeric:-Not Set}"
+snapshot_setting "CIS_5_3_REQUIRES_MIXED_CASE" "${requires_mixed:-Not Set}"
+snapshot_setting "CIS_5_3_REQUIRES_SYMBOL" "${requires_symbol:-Not Set}"
+snapshot_setting "CIS_2_2_1_SCREEN_SAVER_TIMEOUT" "$screensaver_timeout_value"
+snapshot_setting "CIS_2_2_2_SCREEN_SAVER_PASSWORD_REQUIRED" "$screensaver_password_required_value"
+snapshot_setting "CIS_2_2_2_SCREEN_SAVER_PASSWORD_GRACE" "$screensaver_password_grace_value"
+snapshot_setting "CIS_2_2_3_BLUETOOTH_QUIET_MODE" "$bluetooth_quiet_mode_value"
+snapshot_setting "CIS_2_2_4_REMOTE_MANAGEMENT" "$remote_management_value"
+snapshot_setting "CIS_2_10_1_2_POWER_MANAGEMENT" "$power_management_value"
+snapshot_setting "CIS_3_3_REMOTE_APPLE_EVENTS" "$remote_apple_events_value"
+snapshot_setting "CIS_3_4_INTERNET_SHARING" "$internet_sharing_value"
+snapshot_setting "CIS_3_6_REMOTE_LOGIN" "$ssh_state_value"
+snapshot_setting "CIS_3_1_SMB_FILE_SHARING" "$smb_file_sharing_value"
+snapshot_setting "CIS_3_2_CUPS_PRINTER_SHARING" "$cups_printer_sharing_value"
+snapshot_setting "CIS_3_5_CONTENT_CACHING" "$content_caching_value"
+snapshot_setting "CIS_6_2_GUEST_FILE_SHARE_ACCESS" "$guest_file_share_value"
+snapshot_setting "CIS_6_2_GUEST_SMB_ACCESS" "$guest_smb_share_value"
+
+echo "[✓] Snapshot export written to $SNAPSHOT_FILE"
 echo "=================================================================="
 echo "[✓] Read-only CIS Audit Complete."
 echo "=================================================================="
