@@ -99,9 +99,9 @@ on run
 
     set gatekeeperStatus to shell("spctl --status 2>/dev/null")
     if gatekeeperStatus contains "assessments enabled" then
-        set end of reportLines to "Gatekeeper: Enabled"
+        set end of reportLines to "CIS 2.4.3 - Gatekeeper: Enabled"
     else
-        set end of reportLines to "Gatekeeper: Disabled"
+        set end of reportLines to "CIS 2.4.3 - Gatekeeper: Disabled"
     end if
 
     set autoCheck to shell("defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled 2>/dev/null")
@@ -136,6 +136,15 @@ on run
         set end of reportLines to "CIS 6.1 - Guest Account: Enabled"
     else
         set end of reportLines to "CIS 6.1 - Guest Account: Disabled"
+    end if
+
+    set secureBootStatus to shell("system_profiler SPiBridgeDataType 2>/dev/null")
+    if secureBootStatus contains "Secure Boot: Enabled" then
+        set end of reportLines to "CIS 6.5 - Secure Boot (Intel T2): Enabled"
+    else if shell("sysctl -n hw.optional.arm64 2>/dev/null") is "1" then
+        set end of reportLines to "CIS 6.5 - Secure Boot (Apple Silicon): Always Enabled"
+    else
+        set end of reportLines to "CIS 6.5 - Secure Boot: Unable to determine / Not applicable"
     end if
 
     set autologinStatus to shell("defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null")

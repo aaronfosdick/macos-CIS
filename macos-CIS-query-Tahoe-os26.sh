@@ -91,12 +91,12 @@ print_status "CIS 2.4.1 - Application Firewall" "$fw_state"
 fw_stealth=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode 2>/dev/null | awk '{print $NF}')
 print_status "CIS 2.4.2 - Firewall Stealth Mode" "$fw_stealth"
 
-# Gatekeeper
+# CIS Control 2.4.3 — Gatekeeper
 gk_status=$(spctl --status 2>/dev/null)
 if echo "$gk_status" | grep -q "assessments enabled"; then
-    print_status "Gatekeeper" "Enabled"
+    print_status "CIS 2.4.3 - Gatekeeper" "Enabled"
 else
-    print_status "Gatekeeper" "Disabled"
+    print_status "CIS 2.4.3 - Gatekeeper" "Disabled"
 fi
 
 
@@ -153,13 +153,13 @@ else
     print_status "CIS 6.3 - Root Login (Shell)" "${root_shell:-Unknown}"
 fi
 
-# Secure Boot
+# CIS Control 6.5 — Secure Boot
 if system_profiler SPiBridgeDataType 2>/dev/null | grep -q "Secure Boot: Enabled"; then
-    print_status "Secure Boot (Intel T2)" "Enabled"
+    print_status "CIS 6.5 - Secure Boot (Intel T2)" "Enabled"
 elif sysctl -n hw.optional.arm64 2>/dev/null | grep -q 1; then
-    print_status "Secure Boot (Apple Silicon)" "Always Enabled"
+    print_status "CIS 6.5 - Secure Boot (Apple Silicon)" "Always Enabled"
 else
-    print_status "Secure Boot" "Unable to determine / Not applicable"
+    print_status "CIS 6.5 - Secure Boot" "Unable to determine / Not applicable"
 fi
 
 
