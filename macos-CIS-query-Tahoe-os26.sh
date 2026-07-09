@@ -358,7 +358,7 @@ else
 fi
 
 autologin_status=$(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null)
-print_status "Automatic UI Login User" "${autologin_status:-None (Secure)}"
+print_status "CIS 5.7 - Automatic UI Login User" "${autologin_status:-None (Secure)}"
 
 # CIS Control 5.7 — Login Window Auth Database (screensaver)
 auth_db=$(security authorizationdb read system.login.screensaver 2>/dev/null | grep -o "authenticate-user" | head -1)
@@ -718,7 +718,7 @@ snapshot_setting "CIS_2_3_2_PERSONAL_RECOVERY_KEY" "$personal_recovery_value"
 snapshot_setting "CIS_2_3_2_INSTITUTIONAL_RECOVERY_KEY" "$institutional_recovery_value"
 snapshot_setting "CIS_2_4_1_APPLICATION_FIREWALL" "$firewall_state_value"
 snapshot_setting "CIS_2_4_2_FIREWALL_STEALTH_MODE" "$firewall_stealth_value"
-snapshot_setting "CIS_GATEKEEPER_STATUS" "$gatekeeper_value"
+snapshot_setting "CIS_2_4_3_GATEKEEPER_STATUS" "$gatekeeper_value"
 snapshot_setting "CIS_1_1_AUTOMATIC_UPDATE_CHECK" "$auto_check_value"
 snapshot_setting "CIS_1_2_AUTOMATIC_DOWNLOAD" "$auto_download_value"
 snapshot_setting "CIS_1_5_CRITICAL_UPDATE_INSTALL" "$crit_update_value"
@@ -728,7 +728,7 @@ snapshot_setting "CIS_5_1_1_SIP_STATUS" "$sip_value"
 snapshot_setting "CIS_5_1_2_BOOT_ARGS" "$boot_args_value"
 snapshot_setting "CIS_6_1_GUEST_ACCOUNT" "$guest_account_value"
 snapshot_setting "CIS_6_3_ROOT_SHELL" "$root_shell_value"
-snapshot_setting "CIS_SECURE_BOOT" "$secure_boot_value"
+snapshot_setting "CIS_6_5_SECURE_BOOT" "$secure_boot_value"
 snapshot_setting "CIS_5_3_PASSWORD_MINCHARS" "${min_chars:-Not Set}"
 snapshot_setting "CIS_5_4_PASSWORD_MAX_FAILED_LOGIN_ATTEMPTS" "${max_fail:-Not Set}"
 snapshot_setting "CIS_5_3_REQUIRES_NUMERIC" "${requires_numeric:-Not Set}"
@@ -772,7 +772,7 @@ snapshot_setting "NONCIS_GLOBAL_ZSH_UMASK" "$zsh_umask_value"
 snapshot_setting "NONCIS_SUDO_TIMESTAMP_TIMEOUT" "$sudo_timestamp_value"
 snapshot_setting "NONCIS_SUDO_LOG_ALLOWED" "$sudo_log_allowed_value"
 snapshot_setting "NONCIS_SUDO_LOG_DENIED" "$sudo_log_denied_value"
-snapshot_setting "NONCIS_LOGIN_WINDOW_AUTO_LOGIN_USER" "${autologin_status:-None}"
+snapshot_setting "CIS_5_7_AUTOMATIC_UI_LOGIN_USER" "${autologin_status:-None}"
 snapshot_setting "NONCIS_LOGIN_WINDOW_BANNER_TEXT" "${banner_text:-None}" 
 snapshot_setting "NONCIS_HOME_DIR_PERMISSIONS" "$home_dir_perms_value"
 

@@ -137,7 +137,7 @@ restore_from_snapshot() {
       CIS_5_1_1_SIP_STATUS)
         echo "   [!] Skipping SIP restore; SIP changes should be handled from Recovery."
         ;;
-      CIS_SECURE_BOOT)
+      CIS_SECURE_BOOT|CIS_6_5_SECURE_BOOT)
         echo "   [!] Skipping Secure Boot restore; this is not safely changed from the CLI."
         ;;
       CIS_2_4_1_APPLICATION_FIREWALL)
@@ -154,7 +154,7 @@ restore_from_snapshot() {
           /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode off 2>/dev/null
         fi
         ;;
-      CIS_GATEKEEPER_STATUS)
+      CIS_GATEKEEPER_STATUS|CIS_2_4_3_GATEKEEPER_STATUS)
         if [ "$value" = "Enabled" ]; then
           spctl --master-enable 2>/dev/null
         elif [ "$value" = "Disabled" ]; then
@@ -185,6 +185,11 @@ restore_from_snapshot() {
           defaults write /Library/Preferences/com.apple.loginwindow GuestEnabled -bool true 2>/dev/null
         else
           defaults write /Library/Preferences/com.apple.loginwindow GuestEnabled -bool false 2>/dev/null
+        fi
+        ;;
+      NONCIS_LOGIN_WINDOW_AUTO_LOGIN_USER|CIS_5_7_AUTOMATIC_UI_LOGIN_USER)
+        if [ "$value" = "None (Secure)" ] || [ "$value" = "Disabled" ] || [ -z "$value" ]; then
+          defaults delete /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null
         fi
         ;;
       CIS_2_2_1_SCREEN_SAVER_TIMEOUT)

@@ -138,6 +138,10 @@ on run
         set end of reportLines to "CIS 6.1 - Guest Account: Disabled"
     end if
 
+    set autologinStatus to shell("defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null")
+    if autologinStatus is "" then set autologinStatus to "None (Secure)"
+    set end of reportLines to "CIS 5.7 - Automatic UI Login User: " & autologinStatus
+
     set end of reportLines to ""
     set end of reportLines to "--- [1] System Preferences & Access Control ---"
 
@@ -174,7 +178,8 @@ printf '%s
 {
     printf 'CIS_2_3_1_FILEVAULT_STATUS=%s\n' "$(printf '%s' "$report_text" | grep 'CIS 2.3.1' | cut -d: -f2- | xargs)"
     printf 'CIS_2_4_1_APPLICATION_FIREWALL=%s\n' "$(printf '%s' "$report_text" | grep 'CIS 2.4.1' | cut -d: -f2- | xargs)"
-    printf 'CIS_GATEKEEPER_STATUS=%s\n' "$(printf '%s' "$report_text" | grep 'Gatekeeper:' | cut -d: -f2- | xargs)"
+    printf 'CIS_2_4_3_GATEKEEPER_STATUS=%s\n' "$(printf '%s' "$report_text" | grep 'Gatekeeper:' | cut -d: -f2- | xargs)"
+    printf 'CIS_5_7_AUTOMATIC_UI_LOGIN_USER=%s\n' "$(printf '%s' "$report_text" | grep 'CIS 5.7 - Automatic UI Login User' | cut -d: -f2- | xargs)"
     printf 'CIS_1_1_AUTOMATIC_UPDATE_CHECK=%s\n' "$(printf '%s' "$report_text" | grep 'CIS 1.1' | cut -d: -f2- | xargs)"
     printf 'CIS_2_2_1_SCREEN_SAVER_TIMEOUT=%s\n' "$(printf '%s' "$report_text" | grep 'CIS 2.2.1' | cut -d: -f2- | xargs)"
 } >> "$SNAPSHOT_FILE"
