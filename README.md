@@ -24,6 +24,14 @@ sudo bash macos-CIS-apply-Tahoe-os26.sh
 Will ask several questions and then apply the corresponding CIS controls.  
 **Test on a non‑production machine first.**
 
+## Recent Workflow Additions
+
+- The query script now writes timestamped snapshot files to `/private/var/db/macos-cis/snapshots` after each run.
+- Snapshot files are plain text and human-readable, using a simple `KEY=VALUE` format that can later be consumed by an AppleScript-based apply workflow.
+- The apply script now offers two modes: apply the full CIS baseline, or restore from a previously captured snapshot.
+- Snapshot selection is displayed with a human-readable date/time format (including hour and minute) to make it easier to choose the correct backup.
+- Snapshot restore intentionally skips irreversible or unsafe changes such as FileVault, recovery-key escrow state, SIP, and Secure Boot.
+
 ## Controls Covered
 
 - **Core CIS controls**: FileVault, Application Firewall with Stealth Mode, Gatekeeper, SIP, Guest Account, Secure Boot.

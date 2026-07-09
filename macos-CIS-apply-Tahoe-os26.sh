@@ -11,11 +11,43 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+is_mdm_managed() {
+  if command -v profiles >/dev/null 2>&1; then
+    if profiles status -type enrollment 2>/dev/null | grep -Eiq 'enrolled: yes|user approved mdm: yes'; then
+      return 0
+    fi
+
+    if profiles -P -o stdout 2>/dev/null | grep -Eiq 'managed|enrolled'; then
+      return 0
+    fi
+  fi
+
+  if [ -d /var/db/ConfigurationProfiles/Store ]; then
+    if find /var/db/ConfigurationProfiles/Store -type f 2>/dev/null | grep -q .; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+MANAGEMENT_STATE="unmanaged"
+if is_mdm_managed; then
+  MANAGEMENT_STATE="managed"
+fi
+
 clear
 echo "=================================================================="
 echo "          macOS CIS Compliance Configuration Assistant           "
 echo "=================================================================="
 echo ""
+
+echo "[*] Management state: $MANAGEMENT_STATE"
+if [ "$MANAGEMENT_STATE" = "managed" ]; then
+  echo "    [*] MDM profile detected. CIS 2.1.1.1, 2.1.1.2, and 2.3.2 are expected to be managed via MDM."
+else
+  echo "    [!] No MDM profile detected. Skipping CIS 2.1.1.1, 2.1.1.2, and 2.3.2 on this unmanaged personal Mac."
+fi
 
 # ------------------------------------------------------------------------------
 # SNAPSHOT RESTORE HELPERS
@@ -224,9 +256,9 @@ restore_from_snapshot() {
 # INTERACTIVE CHOICES SECTION
 # ------------------------------------------------------------------------------
 
-echo "[?] Choose an operation:"
-echo "    1) Apply all CIS changes"
-echo "    2) Revert to a snapshot"
+echo "[?] CIS 2.3.1/2.3.2 Choose an operation:"
+echo "    1) CIS 2.3.1 Apply all CIS changes"
+echo "    2) CIS 2.3.2 Revert to a snapshot"
 read -p "[?] Selection [1/2]: " OPERATION_SELECTION
 case "$OPERATION_SELECTION" in
   2)
@@ -272,8 +304,8 @@ echo "=================================================================="
 echo ""
 echo "  NOTE: iCloud controls (CIS 2.1.1.1 - 2.1.1.3) and Bluetooth"
 echo "  hardware discoverability (CIS 2.2.3 via SPBluetoothDataType)"
-echo "  require MDM configuration profiles and cannot be enforced via"
-echo "  terminal commands. Use the query script to audit these."
+echo "  are MDM-dependent. On unmanaged personal Macs, CIS 2.1.1.1,"
+echo "  2.1.1.2, and 2.3.2 are skipped. Use the query script to audit them."
 echo "=================================================================="
 echo ""
 
@@ -301,15 +333,15 @@ check_and_apply() {
 # ------------------------------------------------------------------------------
 # CORE CIS CONTROLS
 # ------------------------------------------------------------------------------
-echo "[*] Checking and applying Core CIS Controls..."
+echo "[*] CIS 2.3.1 Checking and applying Core CIS Controls..."
 
 echo ""
-echo "--- Control 1: FileVault (Full Disk Encryption) ---"
+echo "--- CIS 2.3.1 FileVault (Full Disk Encryption) ---"
 # CIS Control 2.3.1 — FileVault
 if fdesetup status 2>/dev/null | grep -q "FileVault is On."; then
     echo "[✓] FileVault – Already compliant. Skipping."
 else
-    echo "[+] FileVault – Not compliant. Attempting to enable..."
+    echo "[+] CIS 2.3.1 FileVault – Not compliant. Attempting to enable..."
     echo ""
     echo "    NOTE: fdesetup enable requires interactive input."
     echo "    You will be prompted to enter your Mac login password."
@@ -329,27 +361,40 @@ else
     fi
 fi
 
+# CIS Control 2.1.1.1 / 2.1.1.2 — iCloud Sync Controls
+echo ""
+echo "--- CIS 2.1.1.1/2.1.1.2 iCloud Sync Controls ---"
+if [ "$MANAGEMENT_STATE" = "unmanaged" ]; then
+    echo "[!] Unmanaged personal Mac detected. Skipping CIS 2.1.1.1 and 2.1.1.2."
+else
+    echo "[*] Managed Mac detected. CIS 2.1.1.1 and 2.1.1.2 are expected to be enforced via MDM profiles."
+fi
+
 # CIS Control 2.3.2 — Key Escrow (Recovery Key)
 echo ""
-echo "--- Key Escrow (Recovery Key) ---"
-echo "[?] Checking if FileVault recovery key is escrowed..."
-if fdesetup haspersonalrecoverykey 2>/dev/null | grep -q "true"; then
-    echo "[✓] Personal recovery key is present."
+echo "--- CIS 2.3.2 Key Escrow (Recovery Key) ---"
+if [ "$MANAGEMENT_STATE" = "unmanaged" ]; then
+    echo "[!] Unmanaged Mac detected. Skipping CIS 2.3.2 recovery-key escrow checks."
 else
-    echo "[!] No personal recovery key detected."
-    echo "    If FileVault is enabled without a recovery key, data may be unrecoverable."
-    echo "    To generate one: sudo fdesetup changerecovery -personal"
-fi
-if fdesetup hasinstitutionalrecoverykey 2>/dev/null | grep -q "true"; then
-    echo "[✓] Institutional recovery key is present."
-else
-    echo "[!] No institutional recovery key detected."
-    echo "    Institutional keys are typically deployed via MDM."
+    echo "[?] CIS 2.3.2 Checking if FileVault recovery key is escrowed..."
+    if fdesetup haspersonalrecoverykey 2>/dev/null | grep -q "true"; then
+        echo "[✓] Personal recovery key is present."
+    else
+        echo "[!] No personal recovery key detected."
+        echo "    If FileVault is enabled without a recovery key, data may be unrecoverable."
+        echo "    To generate one: sudo fdesetup changerecovery -personal"
+    fi
+    if fdesetup hasinstitutionalrecoverykey 2>/dev/null | grep -q "true"; then
+        echo "[✓] Institutional recovery key is present."
+    else
+        echo "[!] No institutional recovery key detected."
+        echo "    Institutional keys are typically deployed via MDM."
+    fi
 fi
 
 # CIS Control 2.4.1 / 2.4.2 — Application Firewall & Stealth Mode
 echo ""
-echo "--- Control 2: Application Firewall ---"
+echo "--- CIS 2.4.1/2.4.2 Application Firewall ---"
 check_and_apply \
     "Application Firewall" \
     '/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null | grep -q "Firewall is enabled"' \
@@ -362,7 +407,7 @@ check_and_apply \
 
 # Gatekeeper
 echo ""
-echo "--- Control 3: Gatekeeper ---"
+echo "--- CIS 2.4.3 Gatekeeper ---"
 check_and_apply \
     "Gatekeeper" \
     'spctl --status 2>/dev/null | grep -q "assessments enabled"' \
@@ -370,7 +415,7 @@ check_and_apply \
 
 # CIS Control 1.1 - 1.5 — Automatic Software Updates
 echo ""
-echo "--- Control 4: Automatic macOS Updates ---"
+echo "--- CIS 1.1/1.2/1.3/1.4/1.5 Automatic macOS Updates ---"
 for key in AutomaticCheckEnabled AutomaticDownload CriticalUpdateInstall; do
     check_and_apply \
         "Software Update: $key" \
@@ -391,7 +436,7 @@ fi
 
 # CIS Control 5.1.1 — System Integrity Protection
 echo ""
-echo "--- Control 5: System Integrity Protection ---"
+echo "--- CIS 5.1.1 System Integrity Protection ---"
 echo "[?] SIP can only be enabled from macOS Recovery. Checking current status..."
 if csrutil status 2>/dev/null | grep -q "enabled"; then
     echo "[✓] SIP – Already enabled."
@@ -418,7 +463,7 @@ fi
 
 # CIS Control 6.1 — Guest Account
 echo ""
-echo "--- Guest Account ---"
+echo "--- CIS 6.1 Guest Account ---"
 check_and_apply \
     "Guest Account Disabled" \
     'defaults read /Library/Preferences/com.apple.loginwindow GuestEnabled 2>/dev/null | grep -qE "0|false"' \
@@ -426,13 +471,13 @@ check_and_apply \
 
 # CIS Control 6.3 — Root Shell Disabled
 echo ""
-echo "--- Root Shell (Interactive Login) ---"
+echo "--- CIS 6.3 Root Shell (Interactive Login) ---"
 current_root_shell=$(dscl . -read /Users/root UserShell 2>/dev/null | awk '{print $NF}')
 if [ "$current_root_shell" = "/usr/bin/false" ]; then
     echo "[✓] Root shell is set to /usr/bin/false (interactive login disabled)."
 else
     echo "[!] Root shell is '$current_root_shell' (interactive login possible)."
-    echo "[+] Setting root shell to /usr/bin/false..."
+    echo "[+] CIS 6.3 Setting root shell to /usr/bin/false..."
     dscl . -change /Users/root UserShell "$current_root_shell" /usr/bin/false 2>/dev/null
     if [ $? -eq 0 ]; then
         echo "     Done."
@@ -457,7 +502,7 @@ fi
 
 # CIS Control 5.3 / 5.4 — Password Policy
 echo ""
-echo "--- Password Policy ---"
+echo "--- CIS 5.3/5.4 Password Policy ---"
 echo "[?] Checking current password policy..."
 
 # Fetch current policy and check compliance inline
@@ -489,7 +534,7 @@ fi
 if $min_chars_ok && $max_fail_ok; then
     echo "[✓] Password Policy – Already compliant. Skipping."
 else
-    echo "[+] Password Policy – Not compliant. Applying..."
+    echo "[+] CIS 5.3/5.4 Password Policy – Not compliant. Applying..."
     pwpolicy -setglobalpolicy "minChars=16 requiresNumeric=0 requiresMixedCase=0 requiresSymbol=0 maxFailedLoginAttempts=5"
     if [ $? -eq 0 ]; then
         echo "     Done."
@@ -507,36 +552,36 @@ echo ""
 # ------------------------------------------------------------------------------
 # 2. SYSTEM PREFERENCES & ACCESS CONTROL (CIS Controls 2.2.1, 2.2.2, 2.2.3)
 # ------------------------------------------------------------------------------
-echo "[+] Hardening Screen Saver & Session Timeout Controls..."
+echo "[+] CIS 2.2.1/2.2.2 Hardening Screen Saver & Session Timeout Controls..."
 # Enforce system-wide defaults for the loginwindow/screensaver architecture
 defaults write com.apple.screensaver idleTime -int "$SS_TIMEOUT"
 defaults write com.apple.screensaver askForPassword -int 1
 defaults write com.apple.screensaver askForPasswordDelay -int "$SS_GRACE"
 
 # CIS Control 2.2.3 — Bluetooth Discoverability
-echo "[+] Disabling Bluetooth Sharing..."
+echo "[+] CIS 2.2.3 Disabling Bluetooth Sharing..."
 /usr/libexec/PlistBuddy -c "Set :QuietMode true" /Library/Preferences/com.apple.Bluetooth.plist 2>/dev/null
 
 # CIS Control 2.2.4 — Remote Management (ARD / Screen Sharing)
-echo "[+] Disabling Remote Management (ARD)..."
+echo "[+] CIS 2.2.4 Disabling Remote Management (ARD)..."
 /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -deactivate -stop 2>/dev/null && echo "     Remote Management deactivated." || echo "     [!] Failed (may not be installed)."
 
 # CIS Control 2.10.1.2 — Energy Sleep Optimization
-echo "[+] Setting Energy Saver: sleep 60 min, display sleep 30 min..."
+echo "[+] CIS 2.10.1.2 Setting Energy Saver: sleep 60 min, display sleep 30 min..."
 pmset -a sleep 60 displaysleep 30 2>/dev/null && echo "     Power management updated." || echo "     [!] Failed."
 
 # CIS Control 3.3 — Remote Apple Events
-echo "[+] Disabling Remote Apple Events..."
+echo "[+] CIS 3.3 Disabling Remote Apple Events..."
 launchctl unload -w /System/Library/LaunchDaemons/com.apple.AEServer.plist 2>/dev/null
 
 # CIS Control 3.4 — Internet Sharing
-echo "[+] Disabling Internet Sharing..."
+echo "[+] CIS 3.4 Disabling Internet Sharing..."
 defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict
 
 # ------------------------------------------------------------------------------
 # 3. NETWORK & SECURITY PROFILE
 # ------------------------------------------------------------------------------
-echo "[+] Setting SSH (Remote Login) State..."
+echo "[+] CIS 3.6 Setting SSH (Remote Login) State..."
 if [ "$ALLOW_SSH" = "y" ]; then
   systemsetup -setremotelogin on
 else
@@ -544,19 +589,19 @@ else
 fi
 
 # CIS Control 3.1 — SMB File Sharing
-echo "[+] Disabling SMB File Sharing..."
+echo "[+] CIS 3.1 Disabling SMB File Sharing..."
 launchctl disable system/com.apple.smbd 2>/dev/null && echo "     SMB sharing disabled." || echo "     [!] Failed."
 
 # CIS Control 3.2 — CUPS Printer Sharing
-echo "[+] Disabling CUPS Printer Sharing..."
+echo "[+] CIS 3.2 Disabling CUPS Printer Sharing..."
 cupsctl --no-share-printers 2>/dev/null && echo "     Printer sharing disabled." || echo "     [!] Failed."
 
 # CIS Control 3.5 — Content Caching (P2P Asset Relays)
-echo "[+] Disabling Content Caching..."
+echo "[+] CIS 3.5 Disabling Content Caching..."
 AssetCacheManagerUtil disable 2>/dev/null && echo "     Content caching disabled." || echo "     [!] Failed (may not be configured)."
 
 # CIS Control 6.2 — Guest SMB/AFP Share Access
-echo "[+] Disabling Guest Access to File Shares..."
+echo "[+] CIS 6.2 Disabling Guest Access to File Shares..."
 defaults write /Library/Preferences/com.apple.AppleFileServer guestAccess -bool false 2>/dev/null
 defaults write /Library/Preferences/com.apple.smb.server AllowGuestAccess -bool false 2>/dev/null
 echo "     Guest access to SMB/AFP shares disabled."
@@ -565,11 +610,11 @@ echo "     Guest access to SMB/AFP shares disabled."
 # 4. LOGGING, AUDITING & ACCESSIBILITY
 # ------------------------------------------------------------------------------
 # CIS Control 4.1 — Security Auditing Daemon
-echo "[+] Ensuring Security Auditing Deployed..."
+echo "[+] CIS 4.1 Ensuring Security Auditing Deployed..."
 launchctl load -w /System/Library/LaunchDaemons/com.apple.auditd.plist 2>/dev/null
 
 # CIS Control 4.2 — Audit Flags (Kernel Scope)
-echo "[+] Setting audit flags to capture high-risk events..."
+echo "[+] CIS 4.2 Setting audit flags to capture high-risk events..."
 if grep -qE "^flags:.*lo" /etc/security/audit_control 2>/dev/null; then
     echo "     Audit flags already configured."
 else
@@ -579,7 +624,7 @@ else
 fi
 
 # CIS Control 4.3 — Audit Minfree (Low-Volume Threshold)
-echo "[+] Setting audit minfree to 25%..."
+echo "[+] CIS 4.3 Setting audit minfree to 25%..."
 if grep -qE "^minfree:25" /etc/security/audit_control 2>/dev/null; then
     echo "     Audit minfree already configured."
 else
@@ -589,7 +634,7 @@ else
 fi
 
 # CIS Control 5.7 — Login Window Auth (Screensaver)
-echo "[+] Ensuring screensaver requires authentication via security authorizationdb..."
+echo "[+] CIS 5.7 Ensuring screensaver requires authentication via security authorizationdb..."
 auth_db_check=$(security authorizationdb read system.login.screensaver 2>/dev/null | grep -c "authenticate-user")
 if [ "$auth_db_check" -gt 0 ]; then
     echo "     Screensaver auth already configured."
@@ -597,16 +642,16 @@ else
     echo "     [!] Cannot reliably remediate this via CLI; use System Settings > Lock Screen."
 fi
 
-echo "[+] Disabling Automatic UI Login..."
+echo "[+] CIS 5.7 Disabling Automatic UI Login..."
 defaults delete /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null
 
-echo "[+] Injecting Organizational Legal Banner text..."
+echo "[+] CIS 5.7 Injecting Organizational Legal Banner text..."
 defaults write /Library/Preferences/com.apple.loginwindow LoginwindowText "UNAUTHORIZED ACCESS TO THIS DEVICE IS STRICTLY PROHIBITED. All activities may be monitored and logged."
 
 # ------------------------------------------------------------------------------
 # 5. USER HOME DIRECTORIES & SHELL POLICIES
 # ------------------------------------------------------------------------------
-echo "[+] Setting Default Secure Umask for New Shell Sessions..."
+echo "[+] CIS 5.5 Setting Default Secure Umask for New Shell Sessions..."
 if [ ! -f /etc/zprofile ]; then
   touch /etc/zprofile
 fi
@@ -615,7 +660,7 @@ if ! grep -q "umask 027" /etc/zprofile; then
 fi
 
 # CIS Control 5.5 — Sudo Session Expiration
-echo "[+] Setting sudo timestamp timeout to 0 (immediate re-authentication)..."
+echo "[+] CIS 5.5 Setting sudo timestamp timeout to 0 (immediate re-authentication)..."
 if [ -d /etc/sudoers.d ]; then
     if [ -f /etc/sudoers.d/00-cis-timestamp ] && grep -q "timestamp_timeout" /etc/sudoers.d/00-cis-timestamp 2>/dev/null; then
         echo "     Sudo timestamp already configured."
@@ -630,7 +675,7 @@ else
 fi
 
 # CIS Control 5.6 — Sudo Logging (Allowed / Denied)
-echo "[+] Enabling sudo logging (allowed and denied commands)..."
+echo "[+] CIS 5.6 Enabling sudo logging (allowed and denied commands)..."
 if [ -d /etc/sudoers.d ]; then
     if [ -f /etc/sudoers.d/00-cis-logging ] && grep -q "log_allowed\|log_denied" /etc/sudoers.d/00-cis-logging 2>/dev/null; then
         echo "     Sudo logging already configured."
@@ -649,7 +694,7 @@ else
 fi
 
 # CIS Control 6.4 — Home Directory Permissions (700 or 750)
-echo "[+] Setting home directory permissions to 700..."
+echo "[+] CIS 6.4 Setting home directory permissions to 700..."
 for user_home in /Users/*; do
     u=$(basename "$user_home")
     if id "$u" &>/dev/null 2>&1 && [ -d "$user_home" ]; then
@@ -671,7 +716,7 @@ echo "=================================================================="
 echo ""
 
 # 1. Safari / Web Security
-echo "[+] Harden Safari security settings..."
+echo "[+] CIS 2.2.4 Harden Safari security settings..."
 # These affect the current user; run for all existing users?
 # Apply system-wide defaults for any user (will affect future logins too with -currentHost?)
 # Simpler: apply to the current user who runs the script as root.
@@ -685,7 +730,7 @@ done
 echo "     Safari AutoFillPasswords disabled, fraudulent website warnings enabled."
 
 # 2. Harden Bluetooth & Sharing
-echo "[+] Disabling Bluetooth, AirDrop, AirPlay..."
+echo "[+] CIS 2.2.3/3.4 Disabling Bluetooth, AirDrop, AirPlay..."
 # Bluetooth controller power off (saves battery, prevents unauthorized connections)
 defaults write /Library/Preferences/com.apple.Bluetooth ControllerPowerState -int 0 2>/dev/null && echo "     Bluetooth controller powered off."
 # Disable AirDrop (per-user)
@@ -700,7 +745,7 @@ echo "     AirDrop disabled for all users."
 defaults write /System/Library/LaunchDaemons/com.apple.AirPlayXPCHelper.plist Disabled -bool true 2>/dev/null && echo "     AirPlay receiver disabled."
 
 # 3. Keychain lock timeout (login keychain)
-echo "[+] Setting login keychain lock timeout to 1 hour..."
+echo "[+] CIS 2.2.3 Setting login keychain lock timeout to 1 hour..."
 for USER_HOME in /Users/*; do
     USER=$(basename "$USER_HOME")
     KEYCHAIN="$USER_HOME/Library/Keychains/login.keychain"
@@ -711,7 +756,7 @@ done
 echo "     Done."
 
 # 4. Disable Time Machine Remote Backups
-echo "[+] Disabling Time Machine remote backups..."
+echo "[+] CIS 2.10.1.2 Disabling Time Machine remote backups..."
 sudo tmutil disable 2>/dev/null && echo "     Done." || echo "     [!] Failed or already disabled."
 
 # ------------------------------------------------------------------------------
@@ -724,12 +769,12 @@ echo "=================================================================="
 echo ""
 
 # 1. Unified logging persistence cap
-echo "[+] Setting unified log retention cap to 24 hours..."
+echo "[+] CIS 4.4 Setting unified log retention cap to 24 hours..."
 /usr/bin/log config --mode "level:persist:24h" 2>/dev/null && echo "     Unified log retention set to 24 hours." || echo "     [!] Failed – check macOS version."
 
 
 # Newsyslog Rotation (24-hour retention)
-echo "[+] Configuring newsyslog for /var/log/* files (daily, zero retention)..."
+echo "[+] CIS 4.4 Configuring newsyslog for /var/log/* files (daily, zero retention)..."
 cat > /etc/newsyslog.d/99-cis-24h-retention.conf << 'EOF'
 # CIS 24-hour retention: rotate daily, keep 0 copies, compress old (none)
 /var/log/system.log       644  0     24    *    Z    /var/run/syslog.pid
@@ -741,7 +786,7 @@ chmod 644 /etc/newsyslog.d/99-cis-24h-retention.conf
 echo "     Created /etc/newsyslog.d/99-cis-24h-retention.conf"
 
 # 3. ASL log TTL
-echo "[+] Setting ASL log TTL to 24 hours..."
+echo "[+] CIS 4.4 Setting ASL log TTL to 24 hours..."
 ASL_CONF="/etc/asl.conf"
 if grep -q "^\?.*ttl=24" "$ASL_CONF" 2>/dev/null; then
     echo "     ASL TTL already configured."
@@ -753,7 +798,7 @@ else
     echo "     Appended TTL rules to $ASL_CONF"
 fi
 # 4. Delete old log files from /Library/Logs and ~/Library/Logs
-echo "[+] Removing log files older than 24 hours from common locations..."
+echo "[+] CIS 4.4 Removing log files older than 24 hours from common locations..."
 if [ -d /Library/Logs ]; then
     find /Library/Logs -type f -mtime +1 -delete 2>/dev/null
     echo "     Cleaned /Library/Logs"
