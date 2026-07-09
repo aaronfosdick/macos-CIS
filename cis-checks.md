@@ -1,4 +1,4 @@
-| CIS Control Number | Profile Level | Control Name / Scope | Detail / Validation Logic | Auditing Engine / Pass Check Command Validation |
+| CIS Control Number | Profile Level | Control Name / Scope | Control&nbsp;Detail&nbsp;/&nbsp;Validation&nbsp;Logic | Auditing Engine / Pass Check Command Validation |
 | :--- | :--- | :--- | :--- | :--- |
 | **1.1** | Level 1 | Automatic Software Updates | Audits the configuration to guarantee the system actively polls Apple's servers for outstanding patches to prevent security drift. | <ul><li>`/usr/bin/sudo /usr/sbin/softwareupdate --schedule`</li></ul> |
 | **1.2** | Level 1 | Update Background Downloads | Checks that updates are aggressively pre-downloaded in the background via system daemons to reduce the time between patch release and staging. | <ul><li>`/usr/bin/sudo /usr/bin/defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool`</li></ul> |

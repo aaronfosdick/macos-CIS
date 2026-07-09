@@ -645,9 +645,6 @@ fi
 echo "[+] CIS 5.7 Disabling Automatic UI Login..."
 defaults delete /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null
 
-echo "[+] CIS 5.7 Injecting Organizational Legal Banner text..."
-defaults write /Library/Preferences/com.apple.loginwindow LoginwindowText "UNAUTHORIZED ACCESS TO THIS DEVICE IS STRICTLY PROHIBITED. All activities may be monitored and logged."
-
 # ------------------------------------------------------------------------------
 # 5. USER HOME DIRECTORIES & SHELL POLICIES
 # ------------------------------------------------------------------------------

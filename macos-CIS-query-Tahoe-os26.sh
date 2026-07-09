@@ -360,13 +360,6 @@ fi
 autologin_status=$(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null)
 print_status "Automatic UI Login User" "${autologin_status:-None (Secure)}"
 
-banner_text=$(defaults read /Library/Preferences/com.apple.loginwindow LoginwindowText 2>/dev/null)
-if [ -n "$banner_text" ]; then
-    print_status "Login Window Banner Text" "Configured"
-else
-    print_status "Login Window Banner Text" "None / Not Configured"
-fi
-
 # CIS Control 5.7 — Login Window Auth Database (screensaver)
 auth_db=$(security authorizationdb read system.login.screensaver 2>/dev/null | grep -o "authenticate-user" | head -1)
 if [ "$auth_db" = "authenticate-user" ]; then
@@ -385,16 +378,20 @@ echo "--- [4] Environment & Shell Policies ---"
 if [ -f /etc/zprofile ] && grep -q "umask" /etc/zprofile; then
     zsh_umask=$(grep "umask" /etc/zprofile)
     print_status "Global ZSH Umask Setting" "$zsh_umask"
+    zsh_umask_value="$zsh_umask"
 else
     print_status "Global ZSH Umask Setting" "Not defined in /etc/zprofile (Defaults to system mask)"
+    zsh_umask_value="Not defined"
 fi
 
 # CIS Control 5.5 — Sudo Session Expiration (timestamp)
 sudo_ts=$(sudo -V 2>/dev/null | grep "Authentication timestamp timeout")
 if [ -n "$sudo_ts" ]; then
     print_status "CIS 5.5 - Sudo Timestamp Timeout" "$(echo "$sudo_ts" | cut -d: -f2)"
+    sudo_timestamp_value="$(echo "$sudo_ts" | cut -d: -f2)"
 else
     print_status "CIS 5.5 - Sudo Timestamp Timeout" "Unknown"
+    sudo_timestamp_value="Unknown"
 fi
 
 # CIS Control 5.6 — Sudo Logging (allowed/denied)
@@ -402,17 +399,22 @@ sudo_log_allowed=$(sudo -V 2>/dev/null | grep "log_allowed")
 sudo_log_denied=$(sudo -V 2>/dev/null | grep "log_denied")
 if [ -n "$sudo_log_allowed" ]; then
     print_status "CIS 5.6 - Sudo Log Allowed" "$(echo "$sudo_log_allowed" | cut -d: -f2)"
+    sudo_log_allowed_value="$(echo "$sudo_log_allowed" | cut -d: -f2)"
 else
     print_status "CIS 5.6 - Sudo Log Allowed" "Not configured"
+    sudo_log_allowed_value="Not configured"
 fi
 if [ -n "$sudo_log_denied" ]; then
     print_status "CIS 5.6 - Sudo Log Denied" "$(echo "$sudo_log_denied" | cut -d: -f2)"
+    sudo_log_denied_value="$(echo "$sudo_log_denied" | cut -d: -f2)"
 else
     print_status "CIS 5.6 - Sudo Log Denied" "Not configured"
+    sudo_log_denied_value="Not configured"
 fi
 
 # CIS Control 6.4 — Home Directory Permissions
 print_status "CIS 6.4 - Home Dir Permissions (Users)" ""
+home_dir_perms_state="Compliant"
 for user_home in /Users/*; do
     u=$(basename "$user_home")
     if id "$u" &>/dev/null 2>&1 && [ -d "$user_home" ]; then
@@ -420,11 +422,13 @@ for user_home in /Users/*; do
         if [ "$perms" = "700" ] || [ "$perms" = "750" ]; then
             :
         else
+            home_dir_perms_state="Non-compliant homes detected"
             echo "    $user_home : $perms"
         fi
     fi
 done
 echo "    (Non-compliant home dirs listed above; 700 or 750 expected)"
+home_dir_perms_value="$home_dir_perms_state"
 
 # ------------------------------------------------------------------------------
 # ADDITIONAL SECURITY HARDENING CHECKS
@@ -471,14 +475,18 @@ else
 fi
 
 # Keychain lock timeout (first user)
+keychain_timeout_value="Not available"
 for user_test in /Users/*; do
     u=$(basename "$user_test")
     keychain="$user_test/Library/Keychains/login.keychain"
     if [ -f "$keychain" ]; then
-        timeout_info=$(sudo -u "$u" security show-keychain-info "$keychain" 2>/dev/null | grep -i "lock-on-sleep" | head -1)
-        # The security command says "The keychain ... has no timeout set" or "timeout=3600" etc.
-        # Actually security show-keychain-info is interactive; better to just check if file exists.
-        print_status "Login Keychain ($u)" "Timeout=3600 (if applied)"
+        timeout_info=$(sudo -u "$u" security show-keychain-info "$keychain" 2>/dev/null | head -1)
+        if [ -n "$timeout_info" ]; then
+            keychain_timeout_value="$timeout_info"
+        else
+            keychain_timeout_value="No timeout configured"
+        fi
+        print_status "Login Keychain ($u)" "$keychain_timeout_value"
         break
     fi
 done
@@ -740,6 +748,33 @@ snapshot_setting "CIS_3_2_CUPS_PRINTER_SHARING" "$cups_printer_sharing_value"
 snapshot_setting "CIS_3_5_CONTENT_CACHING" "$content_caching_value"
 snapshot_setting "CIS_6_2_GUEST_FILE_SHARE_ACCESS" "$guest_file_share_value"
 snapshot_setting "CIS_6_2_GUEST_SMB_ACCESS" "$guest_smb_share_value"
+
+# Additional non-CIS hardening settings
+if [ "$bt_power" = "0" ]; then
+    bt_power_value="Off"
+else
+    bt_power_value="On"
+fi
+snapshot_setting "NONCIS_BLUETOOTH_CONTROLLER_POWER_STATE" "$bt_power_value"
+snapshot_setting "NONCIS_AIRDROP_STATUS" "${airdrop:-Not set (assumed enabled)}"
+snapshot_setting "NONCIS_AIRPLAY_RECEIVER" "$( [ "$airplay_disabled" = "true" ] && echo "Disabled" || echo "Enabled" )"
+snapshot_setting "NONCIS_LOGIN_KEYCHAIN_TIMEOUT" "$keychain_timeout_value"
+snapshot_setting "NONCIS_TIME_MACHINE_STATUS" "${tm_status:-Not available}"
+snapshot_setting "NONCIS_UNIFIED_LOG_STORE_OLD_FILES" "${old_diag:-0}"
+snapshot_setting "NONCIS_NEWSYSLOG_RETENTION_CONFIG" "${newsyslog_entries:+Present ($newsyslog_entries entries)}${newsyslog_entries:-Not configured}"
+snapshot_setting "NONCIS_ASL_TTL_24H" "$(grep -q 'ttl=24' /etc/asl.conf 2>/dev/null && echo Configured || echo Not configured)"
+snapshot_setting "NONCIS_VAR_LOG_OLDER_THAN_24H" "${old_syslog:-0}"
+snapshot_setting "NONCIS_LIBRARY_LOGS_OLDER_THAN_24H" "${old_library_logs:-0}"
+snapshot_setting "NONCIS_USER_LIBRARY_LOGS_OLDER_THAN_24H" "${user_old_logs:-0}"
+snapshot_setting "NONCIS_SAFARI_AUTOFILL_PASSWORDS" "${sf1:-Not configured}"
+snapshot_setting "NONCIS_SAFARI_FRAUD_WARNING" "${sf2:-Not configured}"
+snapshot_setting "NONCIS_GLOBAL_ZSH_UMASK" "$zsh_umask_value"
+snapshot_setting "NONCIS_SUDO_TIMESTAMP_TIMEOUT" "$sudo_timestamp_value"
+snapshot_setting "NONCIS_SUDO_LOG_ALLOWED" "$sudo_log_allowed_value"
+snapshot_setting "NONCIS_SUDO_LOG_DENIED" "$sudo_log_denied_value"
+snapshot_setting "NONCIS_LOGIN_WINDOW_AUTO_LOGIN_USER" "${autologin_status:-None}"
+snapshot_setting "NONCIS_LOGIN_WINDOW_BANNER_TEXT" "${banner_text:-None}" 
+snapshot_setting "NONCIS_HOME_DIR_PERMISSIONS" "$home_dir_perms_value"
 
 echo "[✓] Snapshot export written to $SNAPSHOT_FILE"
 echo "=================================================================="
