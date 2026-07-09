@@ -36,30 +36,30 @@ echo "--- [0] Core CIS Controls ---"
 # CIS Control 2.3.1 — FileVault (Full Disk Encryption)
 fv_status=$(fdesetup status 2>/dev/null)
 if echo "$fv_status" | grep -q "FileVault is On."; then
-    print_status "FileVault (Full Disk Encryption)" "On"
+    print_status "CIS 2.3.1 - FileVault (Full Disk Encryption)" "On"
 else
-    print_status "FileVault (Full Disk Encryption)" "Off"
+    print_status "CIS 2.3.1 - FileVault (Full Disk Encryption)" "Off"
 fi
 
 # CIS Control 2.3.2 — Key Escrow (Personal / Institutional Recovery Key)
 if fdesetup haspersonalrecoverykey 2>/dev/null | grep -q "true"; then
-    print_status "FileVault Personal Recovery Key" "Present"
+    print_status "CIS 2.3.2 - FileVault Personal Recovery Key" "Present"
 else
-    print_status "FileVault Personal Recovery Key" "Not Present"
+    print_status "CIS 2.3.2 - FileVault Personal Recovery Key" "Not Present"
 fi
 if fdesetup hasinstitutionalrecoverykey 2>/dev/null | grep -q "true"; then
-    print_status "FileVault Institutional Recovery Key" "Present"
+    print_status "CIS 2.3.2 - FileVault Institutional Recovery Key" "Present"
 else
-    print_status "FileVault Institutional Recovery Key" "Not Present"
+    print_status "CIS 2.3.2 - FileVault Institutional Recovery Key" "Not Present"
 fi
 
 # CIS Control 2.4.1 — Application Layer Firewall
 fw_state=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null | awk '{print $NF}')
-print_status "Application Firewall" "$fw_state"
+print_status "CIS 2.4.1 - Application Firewall" "$fw_state"
 
 # CIS Control 2.4.2 — Firewall Stealth Mode
 fw_stealth=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode 2>/dev/null | awk '{print $NF}')
-print_status "Firewall Stealth Mode" "$fw_stealth"
+print_status "CIS 2.4.2 - Firewall Stealth Mode" "$fw_stealth"
 
 # Gatekeeper
 gk_status=$(spctl --status 2>/dev/null)
@@ -73,54 +73,54 @@ fi
 
 # CIS Control 1.1 — Automatic Software Updates
 auto_check=$(defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled 2>/dev/null)
-print_status "Automatic Update Check Enabled" "${auto_check:-0 (Disabled)}"
+print_status "CIS 1.1 - Automatic Update Check Enabled" "${auto_check:-0 (Disabled)}"
 
 # CIS Control 1.2 — Update Background Downloads
 auto_download=$(defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload 2>/dev/null)
-print_status "Automatic Download Enabled" "${auto_download:-0 (Disabled)}"
+print_status "CIS 1.2 - Automatic Download Enabled" "${auto_download:-0 (Disabled)}"
 
 # CIS Control 1.5 — Silent Security RSR / Data Patches
 crit_update=$(defaults read /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall 2>/dev/null)
-print_status "Install System Data & Security Files" "${crit_update:-0 (Disabled)}"
+print_status "CIS 1.5 - Install System Data & Security Files" "${crit_update:-0 (Disabled)}"
 
 # CIS Control 1.4 — App Store App Installations
 app_update=$(defaults read /Library/Preferences/com.apple.commerce AutoUpdate 2>/dev/null)
-print_status "Automatic App Store Updates" "${app_update:-0 (Disabled)}"
+print_status "CIS 1.4 - Automatic App Store Updates" "${app_update:-0 (Disabled)}"
 
 # CIS Control 1.3 — Automated OS Installations
 macos_update=$(defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates 2>/dev/null)
-print_status "Automatic OS Updates Enabled" "${macos_update:-0 (Disabled)}"
+print_status "CIS 1.3 - Automatic OS Updates Enabled" "${macos_update:-0 (Disabled)}"
 
 # CIS Control 5.1.1 — System Integrity Protection
 sip_status=$(csrutil status 2>/dev/null)
 if echo "$sip_status" | grep -q "enabled"; then
-    print_status "System Integrity Protection (SIP)" "Enabled"
+    print_status "CIS 5.1.1 - System Integrity Protection (SIP)" "Enabled"
 else
-    print_status "System Integrity Protection (SIP)" "Disabled (see note)"
+    print_status "CIS 5.1.1 - System Integrity Protection (SIP)" "Disabled (see note)"
 fi
 
 # CIS Control 5.1.2 — Boot-args (System Mobile File Integrity)
 boot_args=$(nvram boot-args 2>/dev/null)
 if [ -z "$boot_args" ]; then
-    print_status "Secure Boot Args (nvram)" "Not Set (Secure)"
+    print_status "CIS 5.1.2 - Boot Args (nvram)" "Not Set (Secure)"
 else
-    print_status "Secure Boot Args (nvram)" "$boot_args"
+    print_status "CIS 5.1.2 - Boot Args (nvram)" "$boot_args"
 fi
 
 # CIS Control 6.1 — Guest Account
 guest_status=$(defaults read /Library/Preferences/com.apple.loginwindow GuestEnabled 2>/dev/null)
 if [ "$guest_status" = "1" ] || [ "$guest_status" = "true" ]; then
-    print_status "Guest Account" "Enabled"
+    print_status "CIS 6.1 - Guest Account" "Enabled"
 else
-    print_status "Guest Account" "Disabled"
+    print_status "CIS 6.1 - Guest Account" "Disabled"
 fi
 
 # CIS Control 6.3 — Root Shell Disabled
 root_shell=$(dscl . -read /Users/root UserShell 2>/dev/null)
 if echo "$root_shell" | grep -q "/usr/bin/false"; then
-    print_status "Root Login (Shell)" "Disabled (/usr/bin/false)"
+    print_status "CIS 6.3 - Root Login (Shell)" "Disabled (/usr/bin/false)"
 else
-    print_status "Root Login (Shell)" "${root_shell:-Unknown}"
+    print_status "CIS 6.3 - Root Login (Shell)" "${root_shell:-Unknown}"
 fi
 
 # Secure Boot
@@ -137,16 +137,16 @@ fi
 pw_policy=$(pwpolicy -getglobalpolicy 2>/dev/null)
 min_chars=$(echo "$pw_policy" | tr ',' '\n' | grep "minChars" | cut -d= -f2)
 max_fail=$(echo "$pw_policy" | tr ',' '\n' | grep "maxFailedLoginAttempts" | cut -d= -f2)
-print_status "Password minChars" "${min_chars:-Not Set}"
-print_status "maxFailedLoginAttempts" "${max_fail:-Not Set}"
+print_status "CIS 5.3 - Password minChars" "${min_chars:-Not Set}"
+print_status "CIS 5.4 - maxFailedLoginAttempts" "${max_fail:-Not Set}"
 
 # Also check complexity disablers
 requires_numeric=$(echo "$pw_policy" | tr ',' '\n' | grep "requiresNumeric" | cut -d= -f2)
 requires_mixed=$(echo "$pw_policy" | tr ',' '\n' | grep "requiresMixedCase" | cut -d= -f2)
 requires_symbol=$(echo "$pw_policy" | tr ',' '\n' | grep "requiresSymbol" | cut -d= -f2)
-print_status "requiresNumeric (should be 0)" "${requires_numeric:-Not Set}"
-print_status "requiresMixedCase (should be 0)" "${requires_mixed:-Not Set}"
-print_status "requiresSymbol (should be 0)" "${requires_symbol:-Not Set}"
+print_status "CIS 5.3/5.4 - requiresNumeric (should be 0)" "${requires_numeric:-Not Set}"
+print_status "CIS 5.3/5.4 - requiresMixedCase (should be 0)" "${requires_mixed:-Not Set}"
+print_status "CIS 5.3/5.4 - requiresSymbol (should be 0)" "${requires_symbol:-Not Set}"
 
 echo ""
 
@@ -157,89 +157,89 @@ echo "--- [1] System Preferences & Access Control ---"
 
 # CIS Control 2.2.1 — Screensaver Max Timeout Lock
 ss_timeout=$(defaults read com.apple.screensaver idleTime 2>/dev/null)
-print_status "Screen Saver Timeout (Seconds)" "${ss_timeout:-Not Configured}"
+print_status "CIS 2.2.1 - Screen Saver Timeout (Seconds)" "${ss_timeout:-Not Configured}"
 
 # CIS Control 2.2.2 — Screen Lock Prompt Enforcement
 ss_pwd=$(defaults read com.apple.screensaver askForPassword 2>/dev/null)
-print_status "Require Password After Screen Saver" "${ss_pwd:-Not Configured}"
+print_status "CIS 2.2.2 - Require Password After Screen Saver" "${ss_pwd:-Not Configured}"
 
 ss_delay=$(defaults read com.apple.screensaver askForPasswordDelay 2>/dev/null)
-print_status "Screen Saver Password Grace Period" "${ss_delay:-Not Configured}"
+print_status "CIS 2.2.2 - Screen Saver Password Grace Period" "${ss_delay:-Not Configured}"
 
 bt_sharing=$(defaults read /Library/Preferences/com.apple.Bluetooth.plist QuietMode 2>/dev/null)
 if [ "$bt_sharing" = "true" ] || [ "$bt_sharing" = "1" ]; then
-    print_status "Bluetooth Discoverable/Sharing State" "0 (Disabled / Secure)"
+    print_status "CIS 2.2.3 - Bluetooth Discoverable/Sharing State" "0 (Disabled / Secure)"
 else
-    print_status "Bluetooth Discoverable/Sharing State" "1 (Enabled / Public)"
+    print_status "CIS 2.2.3 - Bluetooth Discoverable/Sharing State" "1 (Enabled / Public)"
 fi
 
 # CIS Control 2.2.3 — Bluetooth Hardware Discoverability
 #   (QuietMode above controls sharing; this checks low-level controller state)
 bt_le=$(system_profiler SPBluetoothDataType 2>/dev/null | grep "Discoverable" | head -1)
 if [ -n "$bt_le" ]; then
-    print_status "Bluetooth Discoverable (Controller)" "$(echo "$bt_le" | awk '{print $NF}')"
+    print_status "CIS 2.2.3 - Bluetooth Discoverable (Controller)" "$(echo "$bt_le" | awk '{print $NF}')"
 else
-    print_status "Bluetooth Discoverable (Controller)" "Unknown"
+    print_status "CIS 2.2.3 - Bluetooth Discoverable (Controller)" "Unknown"
 fi
 
 # CIS Control 2.2.4 — Remote Management (ARD / Screen Sharing)
 if launchctl print-disabled system 2>/dev/null | grep -q "com.apple.RemoteDesktop"; then
-    print_status "Remote Management (ARD)" "Disabled"
+    print_status "CIS 2.2.4 - Remote Management (ARD)" "Disabled"
 else
     rd_status=$(launchctl list 2>/dev/null | grep com.apple.RemoteDesktop)
     if [ -n "$rd_status" ]; then
-        print_status "Remote Management (ARD)" "Enabled"
+        print_status "CIS 2.2.4 - Remote Management (ARD)" "Enabled"
     else
-        print_status "Remote Management (ARD)" "Not loaded (likely disabled)"
+        print_status "CIS 2.2.4 - Remote Management (ARD)" "Not loaded (likely disabled)"
     fi
 fi
 
 # CIS Control 2.10.1.2 — Energy Sleep Optimization
 pmset_info=$(pmset -g custom 2>/dev/null | grep -E "(sleep|displaysleep)" | head -4)
 if [ -n "$pmset_info" ]; then
-    print_status "Power Mgmt (sleep/displaysleep)" "See below"
+    print_status "CIS 2.10.1.2 - Power Mgmt (sleep/displaysleep)" "See below"
     echo "    $pmset_info" | while IFS= read -r line; do
         echo "      $line"
     done
 else
-    print_status "Power Mgmt (sleep/displaysleep)" "Unable to read"
+    print_status "CIS 2.10.1.2 - Power Mgmt (sleep/displaysleep)" "Unable to read"
 fi
 
 # CIS Control 3.3 — Remote Apple Events
 ae_status=$(launchctl list | grep com.apple.AEServer)
 if [ -n "$ae_status" ]; then
-    print_status "Remote Apple Events" "Enabled"
+    print_status "CIS 3.3 - Remote Apple Events" "Enabled"
 else
-    print_status "Remote Apple Events" "Disabled"
+    print_status "CIS 3.3 - Remote Apple Events" "Disabled"
 fi
 
 # CIS Control 3.4 — Internet Sharing
 nat_status=$(defaults read /Library/Preferences/SystemConfiguration/com.apple.nat NAT 2>/dev/null)
 if [ -n "$nat_status" ] && [ "$nat_status" != "{}" ]; then
-    print_status "Internet Sharing" "Enabled"
+    print_status "CIS 3.4 - Internet Sharing" "Enabled"
 else
-    print_status "Internet Sharing" "Disabled"
+    print_status "CIS 3.4 - Internet Sharing" "Disabled"
 fi
 
 # --- iCloud Controls (MDM-enforced; query-only without MDM profile) ---
 # CIS Control 2.1.1.1 — iCloud Keychain Sync
 kc_sync=$(/usr/libexec/PlistBuddy -c "Print :Accounts:0:Services:KEYCHAIN_SYNC:Status" /Library/Preferences/com.apple.mobiledevice.passwordpolicy.plist 2>/dev/null)
-print_status "iCloud Keychain Sync (MDM)" "${kc_sync:-Not restricted (no MDM profile)}"
+print_status "CIS 2.1.1.1 - iCloud Keychain Sync (MDM)" "${kc_sync:-Not restricted (no MDM profile)}"
 
 # CIS Control 2.1.1.2 — iCloud Drive Document Sync
 icloud_drive=$(defaults read /Library/Managed\ Preferences/com.apple.applicationaccess allowCloudDocumentSync 2>/dev/null)
 if [ "$icloud_drive" = "0" ]; then
-    print_status "iCloud Drive Sync (MDM)" "Blocked"
+    print_status "CIS 2.1.1.2 - iCloud Drive Sync (MDM)" "Blocked"
 else
-    print_status "iCloud Drive Sync (MDM)" "${icloud_drive:-Not restricted (no MDM profile)}"
+    print_status "CIS 2.1.1.2 - iCloud Drive Sync (MDM)" "${icloud_drive:-Not restricted (no MDM profile)}"
 fi
 
 # CIS Control 2.1.1.3 — iCloud Desktop & Documents
 icloud_desktop=$(defaults read /Library/Managed\ Preferences/com.apple.finder EnterpriseDesktopDocumentSyncDisabled 2>/dev/null)
 if [ "$icloud_desktop" = "1" ]; then
-    print_status "iCloud Desktop & Documents (MDM)" "Blocked"
+    print_status "CIS 2.1.1.3 - iCloud Desktop & Documents (MDM)" "Blocked"
 else
-    print_status "iCloud Desktop & Documents (MDM)" "${icloud_desktop:-Not restricted (no MDM profile)}"
+    print_status "CIS 2.1.1.3 - iCloud Desktop & Documents (MDM)" "${icloud_desktop:-Not restricted (no MDM profile)}"
 fi
 
 echo ""
@@ -254,46 +254,46 @@ print_status "Remote Login (SSH) Status" "${ssh_state:-Unknown/MDM Controlled}"
 
 # CIS Control 3.1 — SMB File Sharing
 if launchctl print-disabled system 2>/dev/null | grep -q "com.apple.smbd"; then
-    print_status "SMB File Sharing" "Disabled"
+    print_status "CIS 3.1 - SMB File Sharing" "Disabled"
 else
     smb_status=$(launchctl list 2>/dev/null | grep com.apple.smbd)
     if [ -n "$smb_status" ]; then
-        print_status "SMB File Sharing" "Enabled"
+        print_status "CIS 3.1 - SMB File Sharing" "Enabled"
     else
-        print_status "SMB File Sharing" "Not loaded"
+        print_status "CIS 3.1 - SMB File Sharing" "Not loaded"
     fi
 fi
 
 # CIS Control 3.2 — CUPS Network Print Pools
 cups_sharing=$(cupsctl 2>/dev/null | grep "_share_printers")
 if echo "$cups_sharing" | grep -q "_share_printers=0"; then
-    print_status "CUPS Printer Sharing" "Disabled"
+    print_status "CIS 3.2 - CUPS Printer Sharing" "Disabled"
 elif echo "$cups_sharing" | grep -q "_share_printers=1"; then
-    print_status "CUPS Printer Sharing" "Enabled"
+    print_status "CIS 3.2 - CUPS Printer Sharing" "Enabled"
 else
-    print_status "CUPS Printer Sharing" "Unknown"
+    print_status "CIS 3.2 - CUPS Printer Sharing" "Unknown"
 fi
 
 # CIS Control 3.5 — Content Caching (P2P Asset Relays)
 cache_status=$(AssetCacheManagerUtil status 2>/dev/null | head -1)
 if [ -n "$cache_status" ]; then
-    print_status "Content Caching (P2P)" "$cache_status"
+    print_status "CIS 3.5 - Content Caching (P2P)" "$cache_status"
 else
-    print_status "Content Caching (P2P)" "Inactive / Not configured"
+    print_status "CIS 3.5 - Content Caching (P2P)" "Inactive / Not configured"
 fi
 
 # CIS Control 6.2 — Guest Network Share Access
 afp_guest=$(defaults read /Library/Preferences/com.apple.AppleFileServer guestAccess 2>/dev/null)
 if [ "$afp_guest" = "0" ] || [ "$afp_guest" = "false" ]; then
-    print_status "Guest SMB/AFP Share Access" "Disabled"
+    print_status "CIS 6.2 - Guest SMB/AFP Share Access" "Disabled"
 else
-    print_status "Guest SMB/AFP Share Access" "${afp_guest:-Allowed (default)}"
+    print_status "CIS 6.2 - Guest SMB/AFP Share Access" "${afp_guest:-Allowed (default)}"
 fi
 smb_guest=$(defaults read /Library/Preferences/com.apple.smb.server AllowGuestAccess 2>/dev/null)
 if [ "$smb_guest" = "0" ] || [ "$smb_guest" = "false" ]; then
-    print_status "Guest SMB Access" "Disabled"
+    print_status "CIS 6.2 - Guest SMB Access" "Disabled"
 else
-    print_status "Guest SMB Access" "${smb_guest:-Allowed (default)}"
+    print_status "CIS 6.2 - Guest SMB Access" "${smb_guest:-Allowed (default)}"
 fi
 
 echo ""
@@ -306,25 +306,25 @@ echo "--- [3] Logging, Auditing & Access ---"
 # CIS Control 4.1 — Security Auditing Daemon
 audit_status=$(launchctl list | grep com.apple.auditd)
 if [ -n "$audit_status" ]; then
-    print_status "Security Auditing Daemon (auditd)" "Running"
+    print_status "CIS 4.1 - Security Auditing Daemon (auditd)" "Running"
 else
-    print_status "Security Auditing Daemon (auditd)" "Stopped / Disabled"
+    print_status "CIS 4.1 - Security Auditing Daemon (auditd)" "Stopped / Disabled"
 fi
 
 # CIS Control 4.2 — Audit Flags (Kernel Activity Scope)
 audit_flags=$(grep -E "^flags:" /etc/security/audit_control 2>/dev/null)
 if [ -n "$audit_flags" ]; then
-    print_status "Audit Flags (/etc/security/audit_control)" "$(echo "$audit_flags" | cut -d: -f2)"
+    print_status "CIS 4.2 - Audit Flags" "$(echo "$audit_flags" | cut -d: -f2)"
 else
-    print_status "Audit Flags (/etc/security/audit_control)" "Not configured / Missing"
+    print_status "CIS 4.2 - Audit Flags" "Not configured / Missing"
 fi
 
 # CIS Control 4.3 — Audit Minfree (Low-Volume Threshold)
 audit_minfree=$(grep -E "^minfree:" /etc/security/audit_control 2>/dev/null)
 if [ -n "$audit_minfree" ]; then
-    print_status "Audit Minfree" "$(echo "$audit_minfree" | cut -d: -f2)"
+    print_status "CIS 4.3 - Audit Minfree" "$(echo "$audit_minfree" | cut -d: -f2)"
 else
-    print_status "Audit Minfree" "Not configured / Missing"
+    print_status "CIS 4.3 - Audit Minfree" "Not configured / Missing"
 fi
 
 autologin_status=$(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null)
@@ -340,9 +340,9 @@ fi
 # CIS Control 5.7 — Login Window Auth Database (screensaver)
 auth_db=$(security authorizationdb read system.login.screensaver 2>/dev/null | grep -o "authenticate-user" | head -1)
 if [ "$auth_db" = "authenticate-user" ]; then
-    print_status "Login Window Auth (Screensaver)" "Requires authentication"
+    print_status "CIS 5.7 - Login Window Auth (Screensaver)" "Requires authentication"
 else
-    print_status "Login Window Auth (Screensaver)" "Not requiring authentication (or unable to read)"
+    print_status "CIS 5.7 - Login Window Auth (Screensaver)" "Not requiring authentication (or unable to read)"
 fi
 
 echo ""
@@ -362,27 +362,27 @@ fi
 # CIS Control 5.5 — Sudo Session Expiration (timestamp)
 sudo_ts=$(sudo -V 2>/dev/null | grep "Authentication timestamp timeout")
 if [ -n "$sudo_ts" ]; then
-    print_status "Sudo Timestamp Timeout" "$(echo "$sudo_ts" | cut -d: -f2)"
+    print_status "CIS 5.5 - Sudo Timestamp Timeout" "$(echo "$sudo_ts" | cut -d: -f2)"
 else
-    print_status "Sudo Timestamp Timeout" "Unknown"
+    print_status "CIS 5.5 - Sudo Timestamp Timeout" "Unknown"
 fi
 
 # CIS Control 5.6 — Sudo Logging (allowed/denied)
 sudo_log_allowed=$(sudo -V 2>/dev/null | grep "log_allowed")
 sudo_log_denied=$(sudo -V 2>/dev/null | grep "log_denied")
 if [ -n "$sudo_log_allowed" ]; then
-    print_status "Sudo Log Allowed" "$(echo "$sudo_log_allowed" | cut -d: -f2)"
+    print_status "CIS 5.6 - Sudo Log Allowed" "$(echo "$sudo_log_allowed" | cut -d: -f2)"
 else
-    print_status "Sudo Log Allowed" "Not configured"
+    print_status "CIS 5.6 - Sudo Log Allowed" "Not configured"
 fi
 if [ -n "$sudo_log_denied" ]; then
-    print_status "Sudo Log Denied" "$(echo "$sudo_log_denied" | cut -d: -f2)"
+    print_status "CIS 5.6 - Sudo Log Denied" "$(echo "$sudo_log_denied" | cut -d: -f2)"
 else
-    print_status "Sudo Log Denied" "Not configured"
+    print_status "CIS 5.6 - Sudo Log Denied" "Not configured"
 fi
 
 # CIS Control 6.4 — Home Directory Permissions
-print_status "Home Dir Permissions (Users)" ""
+print_status "CIS 6.4 - Home Dir Permissions (Users)" ""
 for user_home in /Users/*; do
     u=$(basename "$user_home")
     if id "$u" &>/dev/null 2>&1 && [ -d "$user_home" ]; then
