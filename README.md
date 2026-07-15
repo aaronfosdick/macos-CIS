@@ -65,3 +65,21 @@ These scripts are written in bash and will need a more substantial conversion to
 - Prefer wrapping the existing system commands in `do shell script` from AppleScript, while keeping the overall logic and prompts in AppleScript for UI and flow control.
 - For read-only audit logic, return status text or result values from AppleScript rather than relying on bash-style `echo` and `printf` output.
 - For remediation logic, use AppleScript dialogs or prompts for user input and then pass the resulting values into shell commands via `do shell script`.
+
+## AppleScript create notes
+Open the Script Editor app on your Mac (press Cmd + Space and type "Script Editor").
+
+# This finds the internal path inside this specific app bundle
+set repoPath to POSIX path of (path to me) & "Contents/Resources/myscript.sh"
+
+# Run the embedded script with admin rights
+do shell script "sudo " & quoted form of repoPath with administrator privileges
+
+
+
+
+1. Save your Bash script somewhere permanent (e.g., /usr/local/bin/myscript.sh or inside your Documents folder).
+2. Make sure it's executable by running chmod +x /path/to/myscript.sh in the Terminal.
+3. In your AppleScript Editor, use this single line:
+
+do shell script "'/path/to/your/myscript.sh'" with administrator privileges
