@@ -3,8 +3,7 @@
 -- ==============================================================================
 -- This script performs a read-only audit of the current macOS configuration,
 -- writes a snapshot file, and returns a human-readable report.
-
-set linefeed to ASCII character 10
+-- Paste directly into AppleScript Editor and click Run.
 
 on joinText(listOfStrings, delimiter)
     set astid to AppleScript's text item delimiters
@@ -34,6 +33,7 @@ on appendStatus(reportLines, labelText, valueText)
 end appendStatus
 
 on run
+    set linefeed to ASCII character 10
     set reportLines to {}
     set end of reportLines to "--- [0] Core CIS Controls ---"
 
@@ -105,8 +105,11 @@ on run
 
     set secureBootStatus to shell("system_profiler SPiBridgeDataType 2>/dev/null")
     set secureBootValue to "Unable to determine / Not applicable"
-    if secureBootStatus contains "Secure Boot: Enabled" then set secureBootValue to "Enabled"
-    else if shell("sysctl -n hw.optional.arm64 2>/dev/null") is "1" then set secureBootValue to "Always Enabled"
+    if secureBootStatus contains "Secure Boot: Enabled" then
+        set secureBootValue to "Enabled"
+    else if shell("sysctl -n hw.optional.arm64 2>/dev/null") is "1" then
+        set secureBootValue to "Always Enabled"
+    end if
     appendStatus(reportLines, "CIS 6.5 - Secure Boot (Intel T2)", secureBootValue)
     if shell("sysctl -n hw.optional.arm64 2>/dev/null") is "1" then
         appendStatus(reportLines, "CIS 6.5 - Secure Boot (Apple Silicon)", "Always Enabled")
@@ -167,8 +170,11 @@ on run
 
     set remoteMgmtState to shell("launchctl print-disabled system 2>/dev/null | grep -q 'com.apple.RemoteDesktop'; echo $? 2>/dev/null")
     set remoteMgmtValue to "Not loaded (likely disabled)"
-    if remoteMgmtState is "0" then set remoteMgmtValue to "Disabled"
-    else if shell("launchctl list 2>/dev/null | grep com.apple.RemoteDesktop") is not "" then set remoteMgmtValue to "Enabled"
+    if remoteMgmtState is "0" then
+        set remoteMgmtValue to "Disabled"
+    else if shell("launchctl list 2>/dev/null | grep com.apple.RemoteDesktop") is not "" then
+        set remoteMgmtValue to "Enabled"
+    end if
     appendStatus(reportLines, "CIS 2.2.4 - Remote Management (ARD)", remoteMgmtValue)
 
     set pmsetInfo to shell("pmset -g custom 2>/dev/null | grep -E '(sleep|displaysleep)' | head -4")
@@ -199,8 +205,11 @@ on run
 
     set cupsSharing to shell("cupsctl 2>/dev/null | grep '_share_printers'")
     set cupsValue to "Unknown"
-    if cupsSharing contains "_share_printers=0" then set cupsValue to "Disabled"
-    else if cupsSharing contains "_share_printers=1" then set cupsValue to "Enabled"
+    if cupsSharing contains "_share_printers=0" then
+        set cupsValue to "Disabled"
+    else if cupsSharing contains "_share_printers=1" then
+        set cupsValue to "Enabled"
+    end if
     appendStatus(reportLines, "CIS 3.2 - CUPS Printer Sharing", cupsValue)
 
     set cacheStatus to shell("AssetCacheManagerUtil status 2>/dev/null | head -1")
@@ -345,5 +354,3 @@ on run
     set outputText to reportText & linefeed & linefeed & "Snapshot written to " & snapshotFile
     return outputText
 end run
-
-run
