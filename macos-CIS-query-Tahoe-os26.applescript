@@ -8,6 +8,8 @@
 use framework "AppKit"
 use scripting additions
 
+property cancelled : false
+
 on joinText(listOfStrings, delimiter)
     set astid to AppleScript's text item delimiters
     set AppleScript's text item delimiters to delimiter
@@ -17,9 +19,13 @@ on joinText(listOfStrings, delimiter)
 end joinText
 
 on shell(commandText)
+    if cancelled then return ""
     try
         return do shell script commandText with administrator privileges
-    on error errText
+    on error errText number errNum
+        if errNum is -128 then
+            set cancelled to true
+        end if
         return ""
     end try
 end shell
