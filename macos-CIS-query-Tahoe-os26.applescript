@@ -5,9 +5,8 @@
 -- writes a snapshot file, and returns a human-readable report.
 -- Paste directly into AppleScript Editor and click Run.
 
+use framework "AppKit"
 use scripting additions
-
-property cancelled : false
 
 on joinText(listOfStrings, delimiter)
     set astid to AppleScript's text item delimiters
@@ -18,13 +17,9 @@ on joinText(listOfStrings, delimiter)
 end joinText
 
 on shell(commandText)
-    if cancelled then return ""
     try
         return do shell script commandText with administrator privileges
-    on error errText number errNum
-        if errNum is -128 then
-            set cancelled to true
-        end if
+    on error errText
         return ""
     end try
 end shell
@@ -362,9 +357,22 @@ on run
     set outputText to reportText & linefeed & linefeed & "Snapshot written to " & snapshotFile
     log outputText
 
-    -- Display results in TextEdit for full scrollable viewing
-    tell application "TextEdit"
-        activate
-        make new document with properties {text:outputText}
-    end tell
+    -- Display results in a scrollable dialog using NSAlert
+    set alertView to current application's NSAlert's alloc()'s init()
+    alertView's setMessageText:"macOS CIS Audit Results"
+    alertView's addButtonWithTitle:"OK"
+
+    set textView to current application's NSTextView's alloc()'s initWithFrame:{origin:{x:0, y:0}, |size|:{width:640, height:400}}
+    textView's setString:outputText
+    textView's setEditable:false
+    textView's setFont:(current application's NSFont's userFixedPitchFontOfSize:10)
+
+    set scrollView to current application's NSScrollView's alloc()'s initWithFrame:{origin:{x:0, y:0}, |size|:{width:640, height:400}}
+    scrollView's setDocumentView:textView
+    scrollView's setHasVerticalScroller:true
+    scrollView's setAutohidesScrollers:false
+    scrollView's setBorderType:(current application's NSBezelBorder)
+
+    alertView's setAccessoryView:scrollView
+    alertView's runModal()
 end run
