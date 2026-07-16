@@ -352,5 +352,5 @@ on run
     shell(snapshotCommand)
 
     set outputText to reportText & linefeed & linefeed & "Snapshot written to " & snapshotFile
-    return outputText
+    display dialog "macOS CIS Audit Results" default answer outputText buttons {"OK"} default button 1 with title "macOS CIS Audit" with icon note
 end run
