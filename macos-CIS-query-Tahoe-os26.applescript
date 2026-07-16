@@ -287,29 +287,29 @@ on run
 
     set safariAutoFill to shell("defaults read com.apple.Safari AutoFillPasswords 2>/dev/null")
     set safariWarn to shell("defaults read com.apple.Safari WarnAboutFraudulentWebsites 2>/dev/null")
-    appendStatus(reportLines, "Safari AutoFillPasswords ($u)", safeValue(safariAutoFill, "Not configured"))
-    appendStatus(reportLines, "Safari WarnAboutFraudulentWebsites ($u)", safeValue(safariWarn, "Not configured"))
+    appendStatus(reportLines, "CIS 5.1 - Safari AutoFillPasswords", safeValue(safariAutoFill, "Not configured"))
+    appendStatus(reportLines, "CIS 5.2 - Safari WarnAboutFraudulentWebsites", safeValue(safariWarn, "Not configured"))
 
     set btPower to shell("defaults read /Library/Preferences/com.apple.Bluetooth ControllerPowerState 2>/dev/null")
     set btPowerValue to "On"
     if btPower is "0" then set btPowerValue to "Off"
-    appendStatus(reportLines, "Bluetooth Controller", btPowerValue)
+    appendStatus(reportLines, "CIS 5.3 - Bluetooth Controller", btPowerValue)
 
     set airdropStatus to shell("defaults read com.apple.sharingd AirDrop 2>/dev/null")
-    appendStatus(reportLines, "AirDrop ($u)", safeValue(airdropStatus, "Not set (assumed enabled)"))
+    appendStatus(reportLines, "CIS 5.4 - AirDrop", safeValue(airdropStatus, "Not set (assumed enabled)"))
 
     set airplayDisabled to shell("defaults read /System/Library/LaunchDaemons/com.apple.AirPlayXPCHelper.plist Disabled 2>/dev/null")
     set airplayValue to "Enabled (or not configured)"
     if airplayDisabled is "true" then set airplayValue to "Disabled"
-    appendStatus(reportLines, "AirPlay Receiver", airplayValue)
+    appendStatus(reportLines, "CIS 5.5 - AirPlay Receiver", airplayValue)
 
     set keychainTimeoutValue to shell("security show-keychain-info ~/Library/Keychains/login.keychain 2>/dev/null | head -1")
-    appendStatus(reportLines, "Login Keychain ($u)", safeValue(keychainTimeoutValue, "Not available"))
+    appendStatus(reportLines, "CIS 5.6 - Login Keychain", safeValue(keychainTimeoutValue, "Not available"))
 
     set tmStatus to shell("tmutil destinationinfo 2>/dev/null | head -1")
     set tmValue to "No destinations configured"
     if tmStatus is not "" then set tmValue to "Destinations configured (remote backups possible)"
-    appendStatus(reportLines, "Time Machine", tmValue)
+    appendStatus(reportLines, "CIS 5.7 - Time Machine", tmValue)
 
     set end of reportLines to ""
     set end of reportLines to "--- [6] 24-Hour Log Retention Checks ---"
@@ -318,24 +318,24 @@ on run
     set oldDiagCount to shell("find /var/db/diagnostics -type f -mtime +2 2>/dev/null | wc -l | tr -d ' '")
     set logRetentionValue to "None found (likely capped at 24h)"
     if oldDiagCount is not "" and oldDiagCount is not "0" then set logRetentionValue to oldDiagCount & " files present (may exceed 24h retention)"
-    appendStatus(reportLines, "Unified log store (>48h old files)", logRetentionValue)
+    appendStatus(reportLines, "CIS 6.1 - Unified log store (>48h old files)", logRetentionValue)
 
     set newsyslogConfig to shell("grep -c '^/var/log/' /etc/newsyslog.d/99-cis-24h-retention.conf 2>/dev/null")
     set newsyslogValue to "Not configured"
     if newsyslogConfig is not "" then set newsyslogValue to "Present (" & newsyslogConfig & " log entries, count=0)"
-    appendStatus(reportLines, "Newsyslog CIS retention config", newsyslogValue)
+    appendStatus(reportLines, "CIS 6.2 - Newsyslog retention config", newsyslogValue)
 
     set aslTTL to shell("grep 'ttl=24' /etc/asl.conf 2>/dev/null")
     set aslTTLValue to "Not configured"
     if aslTTL is not "" then set aslTTLValue to "Configured"
-    appendStatus(reportLines, "ASL TTL (24 hours)", aslTTLValue)
+    appendStatus(reportLines, "CIS 6.3 - ASL TTL (24 hours)", aslTTLValue)
 
     set oldSyslogLogs to shell("find /var/log -type f -name '*.log' -mtime +1 2>/dev/null | wc -l | tr -d ' '")
     set oldLibraryLogs to shell("find /Library/Logs -type f -mtime +1 2>/dev/null | wc -l | tr -d ' '")
     set oldUserLogs to shell("find ~/Library/Logs -type f -mtime +1 2>/dev/null | wc -l | tr -d ' '")
-    appendStatus(reportLines, "/var/log *.log older than 24h", safeValue(oldSyslogLogs, "0") & " files")
-    appendStatus(reportLines, "/Library/Logs older than 24h", safeValue(oldLibraryLogs, "0") & " files")
-    appendStatus(reportLines, "~/Library/Logs older than 24h ($first_user)", safeValue(oldUserLogs, "0") & " files")
+    appendStatus(reportLines, "CIS 6.4 - /var/log *.log older than 24h", safeValue(oldSyslogLogs, "0") & " files")
+    appendStatus(reportLines, "CIS 6.5 - /Library/Logs older than 24h", safeValue(oldLibraryLogs, "0") & " files")
+    appendStatus(reportLines, "CIS 6.6 - ~/Library/Logs older than 24h", safeValue(oldUserLogs, "0") & " files")
 
     set reportText to joinText(reportLines, linefeed)
     log reportText
