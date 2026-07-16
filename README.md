@@ -83,3 +83,14 @@ do shell script "sudo " & quoted form of repoPath with administrator privileges
 3. In your AppleScript Editor, use this single line:
 
 do shell script "'/path/to/your/myscript.sh'" with administrator privileges
+
+
+# Bundling
+Build a .dmg Disk Image
+Creating a DMG is the best approach if you want the app to look like a standard Mac installer. DMG files preserve macOS file permissions and executable flags during transit much better than ZIP files do.
+
+To create a DMG without any paid software:
+1. Open the built-in Disk Utility app on your Mac.
+2. From the top menu, select File > New Image > Image from Folder...
+3. Select your .app application directory and click Choose.
+4. Name your DMG, set the Encryption to "none", and click Save.
