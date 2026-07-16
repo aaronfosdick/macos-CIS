@@ -5,6 +5,9 @@
 -- writes a snapshot file, and returns a human-readable report.
 -- Paste directly into AppleScript Editor and click Run.
 
+use framework "AppKit"
+use scripting additions
+
 on joinText(listOfStrings, delimiter)
     set astid to AppleScript's text item delimiters
     set AppleScript's text item delimiters to delimiter
@@ -352,5 +355,24 @@ on run
     shell(snapshotCommand)
 
     set outputText to reportText & linefeed & linefeed & "Snapshot written to " & snapshotFile
-    display dialog "macOS CIS Audit Results" default answer outputText buttons {"OK"} default button 1 with title "macOS CIS Audit" with icon note
+    log outputText
+
+    -- Display results in a scrollable dialog using NSAlert
+    set alertView to current application's NSAlert's alloc()'s init()
+    alertView's setMessageText:"macOS CIS Audit Results"
+    alertView's addButtonWithTitle:"OK"
+
+    set textView to current application's NSTextView's alloc()'s initWithFrame:{origin:{x:0, y:0}, |size|:{width:640, height:400}}
+    textView's setString:outputText
+    textView's setEditable:false
+    textView's setFont:(current application's NSFont's userFixedPitchFontOfSize:10)
+
+    set scrollView to current application's NSScrollView's alloc()'s initWithFrame:{origin:{x:0, y:0}, |size|:{width:640, height:400}}
+    scrollView's setDocumentView:textView
+    scrollView's setHasVerticalScroller:true
+    scrollView's setAutohidesScrollers:false
+    scrollView's setBorderType:(current application's NSBezelBorder)
+
+    alertView's setAccessoryView:scrollView
+    alertView's runModal()
 end run
