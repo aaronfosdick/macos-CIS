@@ -345,11 +345,11 @@ on run
     set snapshotRunTime to shell("date '+%Y-%m-%d %H:%M:%S %Z'")
     set snapshotFile to snapshotDir & "/macos-cis-snapshot-" & snapshotTS & ".txt"
 
-    do shell script "/bin/mkdir -p " & quoted form of snapshotDir
+    shell("/bin/mkdir -p " & quoted form of snapshotDir)
 
-    set snapshotContent to "# macOS CIS Snapshot" & linefeed & "# Generated: " & snapshotRunTime & linefeed & "# Version: 1" & linefeed & "# Format: KEY=VALUE" & linefeed & "# Purpose: Human-readable restore input for a future AppleScript apply workflow" & linefeed & "SNAPSHOT_TIMESTAMP=" & snapshotRunTime & linefeed & "SNAPSHOT_FILENAME=" & (do shell script "basename " & quoted form of snapshotFile) & linefeed & linefeed & reportText & linefeed
+    set snapshotContent to "# macOS CIS Snapshot" & linefeed & "# Generated: " & snapshotRunTime & linefeed & "# Version: 1" & linefeed & "# Format: KEY=VALUE" & linefeed & "# Purpose: Human-readable restore input for a future AppleScript apply workflow" & linefeed & "SNAPSHOT_TIMESTAMP=" & snapshotRunTime & linefeed & "SNAPSHOT_FILENAME=" & (shell("/bin/basename " & quoted form of snapshotFile)) & linefeed & linefeed & reportText & linefeed
     set snapshotCommand to "/bin/cat > " & quoted form of snapshotFile & " <<'EOF'" & linefeed & snapshotContent & linefeed & "EOF"
-    do shell script snapshotCommand
+    shell(snapshotCommand)
 
     set outputText to reportText & linefeed & linefeed & "Snapshot written to " & snapshotFile
     return outputText
