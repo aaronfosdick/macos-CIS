@@ -52,7 +52,7 @@ on run
     if institutionalRecovery contains "true" then set institutionalRecoveryValue to "Present"
     appendStatus(reportLines, "CIS 2.3.2 - FileVault Institutional Recovery Key", institutionalRecoveryValue)
 
-    set fwState to shell("/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null | awk '{print $NF}'")
+    set fwState to shell("/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null | awk '{print $NF}' | tr -d ')'")
     appendStatus(reportLines, "CIS 2.4.1 - Application Firewall", fwState)
 
     set fwStealth to shell("/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode 2>/dev/null | awk '{print $NF}'")
@@ -177,7 +177,7 @@ on run
     end if
     appendStatus(reportLines, "CIS 2.2.4 - Remote Management (ARD)", remoteMgmtValue)
 
-    set pmsetInfo to shell("pmset -g custom 2>/dev/null | grep -E '(sleep|displaysleep)' | head -4")
+    set pmsetInfo to shell("pmset -g custom 2>/dev/null | grep -E '(sleep|displaysleep)' | head -4 | tr '\r' ' '")
     set pmsetValue to "Unable to read"
     if pmsetInfo is not "" then set pmsetValue to pmsetInfo
     appendStatus(reportLines, "CIS 2.10.1.2 - Power Mgmt (sleep/displaysleep)", pmsetValue)
