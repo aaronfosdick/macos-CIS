@@ -84,13 +84,44 @@ do shell script "sudo " & quoted form of repoPath with administrator privileges
 
 do shell script "'/path/to/your/myscript.sh'" with administrator privileges
 
+# Obtain developer certificate if not present
 
-# Bundling
-Build a .dmg Disk Image
-Creating a DMG is the best approach if you want the app to look like a standard Mac installer. DMG files preserve macOS file permissions and executable flags during transit much better than ZIP files do.
+- Download Apple's Developer ID - G2 SubCA certificate directly from Apple's site: developer.apple.com/certificationauthority/DeveloperIDG2CA.cer
+- Double-click the .cer file to add it to your Keychain.
 
-To create a DMG without any paid software:
-1. Open the built-in Disk Utility app on your Mac.
-2. From the top menu, select File > New Image > Image from Folder...
-3. Select your .app application directory and click Choose.
-4. Name your DMG, set the Encryption to "none", and click Save.
+# Sign app - to get through Gatekeeper
+
+1.  **Verify your certificate**
+
+    ```shell
+    security find-identity -v -p codesigning
+    ```
+
+2.  **Deep sign**
+
+    ```shell
+    codesign --force --deep --options runtime --sign "Developer ID Application: Your Name (TEAM_ID)" /path/to/MyScriptApp.app
+    ```
+
+3.  **Verify**
+
+    ```shell
+    codesign --verify --verbose /path/to/MyScriptApp.app
+    ```
+
+4.  **Use ditto to zip**
+
+    ```shell
+    ditto -c -k --keepParent /path/to/MyScriptApp.app /path/to/MyScriptApp.zip
+    ```
+
+5.  **Submit to notary**
+
+    ```shell
+    xcrun notarytool submit /path/to/MyScriptApp.zip --apple-id "your-apple-id@email.com" --team-id "YOUR_TEAM_ID" --wait
+    ```
+
+6.  **Staple app**
+
+    ```shell
+    xcrun stapler staple /path/to/MyScriptApp.app
