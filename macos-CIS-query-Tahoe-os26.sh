@@ -245,7 +245,7 @@ fi
 
 # CIS Control 3.4 — Internet Sharing
 nat_status=$(defaults read /Library/Preferences/SystemConfiguration/com.apple.nat NAT 2>/dev/null)
-if [ -n "$nat_status" ] && [ "$nat_status" != "{}" ]; then
+if echo "$nat_status" | grep -q "Enabled = 1"; then
     print_status "CIS 3.4 - Internet Sharing" "Enabled"
 else
     print_status "CIS 3.4 - Internet Sharing" "Disabled"
@@ -675,7 +675,7 @@ if [ -n "$ae_status" ]; then
 else
     remote_apple_events_value="Disabled"
 fi
-if [ -n "$nat_status" ] && [ "$nat_status" != "{}" ]; then
+if echo "$nat_status" | grep -q "Enabled = 1"; then
     internet_sharing_value="Enabled"
 else
     internet_sharing_value="Disabled"
