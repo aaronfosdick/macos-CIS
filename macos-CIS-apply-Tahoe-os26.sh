@@ -806,6 +806,10 @@ if [ -d /Library/Logs ]; then
     find /Library/Logs -type f -mtime +1 -delete 2>/dev/null
     echo "     Cleaned /Library/Logs"
 fi
+if [ -d /var/log ]; then
+    find /var/log -type f -mtime +1 -delete 2>/dev/null
+    echo "     Cleaned /var/log"
+fi
 for user_home in /Users/*; do
     user_logs="$user_home/Library/Logs"
     if [ -d "$user_logs" ]; then
