@@ -771,8 +771,9 @@ echo "=================================================================="
 echo ""
 
 # 1. Unified logging persistence cap
-echo "[+] CIS 4.4 Setting unified log retention cap to 24 hours..."
-/usr/bin/log config --mode "level:persist:24h" 2>/dev/null && echo "     Unified log retention set to 24 hours." || echo "     [!] Failed – check macOS version."
+echo "[+] CIS 4.4 disabling unified log retention ..."
+/usr/bin/log config --mode "persist:off" 2>/dev/null && echo "     Unified log persistence disabled." || echo "     [!] Warning – can be ignored."
+/usr/bin/log config --mode "level:off" 2>/dev/null && echo "     Unified log level set off." || echo "     [!] Failed – check macOS version."
 
 
 # Newsyslog Rotation (24-hour retention)
