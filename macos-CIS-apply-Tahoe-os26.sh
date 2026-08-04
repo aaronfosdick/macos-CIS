@@ -581,7 +581,7 @@ launchctl unload -w /System/Library/LaunchDaemons/com.apple.AEServer.plist 2>/de
 
 # CIS Control 3.4 — Internet Sharing
 echo "[+] CIS 3.4 Disabling Internet Sharing..."
-defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict
+defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict Enabled -int 0
 
 # ------------------------------------------------------------------------------
 # 3. NETWORK & SECURITY PROFILE
