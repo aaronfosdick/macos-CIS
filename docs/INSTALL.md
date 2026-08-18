@@ -1,5 +1,13 @@
 # Installation Instructions
 
+**Download the Script**
+Open this link in your browser:<br>
+https://github.com/aaronfosdick/macos-CIS/blob/master/macos-CIS-apply-Tahoe-os26.sh<br>
+In the upper right, click on the small download icon to download the file to the Downloads folder on your laptop
+
+<img src="downloadraw.png" alt="Download" width="50%">
+
+
 **Open Finder -> Applications -> Utilities:** 
 
 <img src="Utilities.png" alt="Screenshot 1" width="75%">
