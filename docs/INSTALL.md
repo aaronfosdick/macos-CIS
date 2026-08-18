@@ -1,7 +1,7 @@
 # Installation Instructions
 
-**Download the Script**
-Open this link in your browser:<br>
+**Download the Script** <br>
+Open this link in your browser: 
 https://github.com/aaronfosdick/macos-CIS/blob/master/macos-CIS-apply-Tahoe-os26.sh<br>
 In the upper right of the page, click on the small download icon to download the file to the Downloads folder on your laptop
 
