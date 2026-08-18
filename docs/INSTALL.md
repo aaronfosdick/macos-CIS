@@ -3,7 +3,7 @@
 **Download the Script**
 Open this link in your browser:<br>
 https://github.com/aaronfosdick/macos-CIS/blob/master/macos-CIS-apply-Tahoe-os26.sh<br>
-In the upper right, click on the small download icon to download the file to the Downloads folder on your laptop
+In the upper right of the page, click on the small download icon to download the file to the Downloads folder on your laptop
 
 <img src="downloadraw.png" alt="Download" width="50%">
 
@@ -34,7 +34,13 @@ _enter your macbook password when prompted_
 <img src="terminal2.png" alt="Screenshot 4" width="75%">
 
 
-**The script will ask a few more questions, default choices are in CAPS:** 
+**The script will ask a few more questions, default choices are in CAPS:**<br> 
+Set Screen Saver inactivity to 600 seconds (10 minutes)<br>
+Grace Period is the amount of time after the screen goes blank that it locks. Either 0 or 10 seconds is fine.<br>
+Remote Login: No<br>
+Automated Updates: Yes<br>
+Other choices: Yes
+
 <img src="terminal3.png" alt="Screenshot 5" width="75%">
 
 
